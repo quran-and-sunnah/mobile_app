@@ -1,5 +1,8 @@
 {
   "expo": {
+    "extra": {
+      "fonts": "assets/fonts/"
+    },
     "name": "mobile_app",
     "slug": "mobile_app",
     "version": "1.0.0",
