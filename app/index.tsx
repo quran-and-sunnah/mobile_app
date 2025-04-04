@@ -6,7 +6,7 @@ const HadithCaligraphy = require('../assets/images/hadith_caligraphy.png');
 const MasjidImage = require('../assets/images/masjid.png');
 
 export default function Index() {
-  const router = useRouter(); // Moved inside the component
+  const router = useRouter();
 
   const handleQuranPress = () => {
     router.push("/quran");
