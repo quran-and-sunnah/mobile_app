@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Button, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet, SafeAreaView, ScrollView, Image } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, SafeAreaView, ScrollView, Image, Pressable } from "react-native";
 import { useRouter } from "expo-router";
+import "../global.css";
 
 // Define the types for our data structures
 interface BookMetadata {
@@ -105,9 +106,9 @@ export default function Hadith() {
   // Render loading state
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#0000ff" />
-        <Text>Loading hadith data...</Text>
+      <View className="flex-1 justify-center items-center bg-white">
+        <ActivityIndicator size="large" color="#3b82f6" />
+        <Text className="mt-4 text-gray-700 font-poppinsSemiBold">Loading hadith data...</Text>
       </View>
     );
   }
@@ -115,13 +116,23 @@ export default function Hadith() {
   // Render error state
   if (error) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>{error}</Text>
-        <Button title="Try Again" onPress={() => {
-          setError(null);
-          loadBukhariData();
-        }} />
-        <Button title="Go Back" onPress={() => router.push("/")} />
+      <View className="flex-1 justify-center items-center p-4 bg-white">
+        <Text className="text-red-500 mb-4 text-center">{error}</Text>
+        <Pressable 
+          className="bg-blue-500 px-6 py-3 rounded-lg mb-3 w-full"
+          onPress={() => {
+            setError(null);
+            loadBukhariData();
+          }}
+        >
+          <Text className="text-white text-center font-poppinsSemiBold">Try Again</Text>
+        </Pressable>
+        <Pressable 
+          className="bg-gray-100 px-6 py-3 rounded-lg w-full"
+          onPress={() => router.push("/")}
+        >
+          <Text className="text-gray-800 text-center font-poppinsSemiBold">Go Back</Text>
+        </Pressable>
       </View>
     );
   }
@@ -131,24 +142,44 @@ export default function Hadith() {
     const chapterName = bukhariData?.chapters.find(c => c.id === selectedHadith.chapterId)?.english || '';
     
     return (
-      <SafeAreaView style={styles.container}>
-        <Button title="Back to List" onPress={handleBack} />
-        <ScrollView style={styles.hadithContainer}>
-          <Text style={styles.hadithNumber}>Hadith #{selectedHadith.idInBook}</Text>
+      <SafeAreaView className="flex-1 bg-white">
+        <ScrollView className="flex-1 px-4 py-6">
+          <Pressable 
+            className="mb-4 bg-blue-500 py-2 px-4 rounded-md self-start"
+            onPress={handleBack}
+          >
+            <Text className="text-white font-poppinsSemiBold">← Back</Text>
+          </Pressable>
           
-          <Text style={styles.bookName}>
-            Book: {bukhariData?.metadata.english.title || 'Sahih al-Bukhari'}
-          </Text>
+          <View className="bg-blue-50 rounded-xl p-5 mb-6 shadow-sm">
+            <Text className="text-blue-800 text-lg font-poppinsSemiBold mb-1">
+              Hadith #{selectedHadith.idInBook}
+            </Text>
+            
+            <Text className="text-lg font-poppinsBold text-gray-800 mb-1">
+              {bukhariData?.metadata.english.title || 'Sahih al-Bukhari'}
+            </Text>
+            
+            <Text className="text-gray-600 font-poppins mb-3">
+              Chapter: {chapterName}
+            </Text>
+          </View>
           
-          <Text style={styles.chapterName}>Chapter: {chapterName}</Text>
-          
-          <Text style={styles.narratorText}>{selectedHadith.english.narrator}</Text>
-          
-          <Text style={styles.hadithText}>{selectedHadith.english.text}</Text>
+          <View className="bg-white rounded-xl p-5 mb-6 shadow-sm border border-gray-100">
+            <Text className="text-gray-600 italic font-poppins mb-4">
+              {selectedHadith.english.narrator}
+            </Text>
+            
+            <Text className="text-gray-800 font-poppins text-base leading-6">
+              {selectedHadith.english.text}
+            </Text>
+          </View>
           
           {selectedHadith.arabic && (
-            <View style={styles.arabicContainer}>
-              <Text style={styles.arabicText}>{selectedHadith.arabic}</Text>
+            <View className="bg-gray-50 rounded-xl p-5 mb-4 shadow-sm">
+              <Text className="text-right text-lg leading-8 font-poppins text-gray-800" style={{ writingDirection: 'rtl' }}>
+                {selectedHadith.arabic}
+              </Text>
             </View>
           )}
         </ScrollView>
@@ -159,16 +190,28 @@ export default function Hadith() {
   // Render hadiths list view
   if (view === 'hadiths' && selectedChapter) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Button title="Back to Chapters" onPress={handleBack} />
-          <Text style={styles.title}>{bukhariData?.metadata.english.title || 'Sahih al-Bukhari'}</Text>
-          <Text style={styles.subtitle}>{selectedChapter.english}</Text>
+      <SafeAreaView className="flex-1 bg-white">
+        <View className="px-4 pt-6 pb-3 bg-white">
+          <Pressable 
+            className="mb-4 bg-blue-500 py-2 px-4 rounded-md self-start"
+            onPress={handleBack}
+          >
+            <Text className="text-white font-poppinsSemiBold">← Back</Text>
+          </Pressable>
+          
+          <Text className="text-xl font-poppinsBold text-gray-800 text-center">
+            {bukhariData?.metadata.english.title || 'Sahih al-Bukhari'}
+          </Text>
+          
+          <Text className="text-base font-poppins text-gray-600 text-center mb-3">
+            {selectedChapter.english}
+          </Text>
         </View>
         
         <FlatList
           data={chapterHadiths}
           keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
           renderItem={({ item }) => {
             // Limit preview text to avoid excessive length
             const previewText = item.english.text.length > 120
@@ -177,12 +220,20 @@ export default function Hadith() {
             
             return (
               <TouchableOpacity 
-                style={styles.hadithItem}
+                className="p-4 mb-3 bg-white rounded-xl shadow-sm border border-gray-100"
                 onPress={() => handleHadithSelect(item)}
               >
-                <Text style={styles.hadithNumber}>Hadith #{item.idInBook}</Text>
-                <Text style={styles.narratorPreview}>{item.english.narrator}</Text>
-                <Text style={styles.hadithPreview}>{previewText}</Text>
+                <Text className="text-blue-600 font-poppinsSemiBold mb-2">
+                  Hadith #{item.idInBook}
+                </Text>
+                
+                <Text className="italic text-sm text-gray-600 font-poppins mb-2">
+                  {item.english.narrator}
+                </Text>
+                
+                <Text className="text-gray-700 font-poppins">
+                  {previewText}
+                </Text>
               </TouchableOpacity>
             );
           }}
@@ -193,154 +244,62 @@ export default function Hadith() {
 
   // Render chapters list view (default view)
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>
+    <SafeAreaView className="flex-1 bg-white">
+      <View className="items-center pt-6 pb-3 px-4">
+        <Text className="text-2xl font-poppinsBold text-gray-800 text-center">
           {bukhariData?.metadata.english.title || 'Sahih al-Bukhari'}
         </Text>
-        <Text style={styles.subtitle}>
+        
+        <Text className="text-base font-poppins text-gray-600 mb-4 text-center">
           by {bukhariData?.metadata.english.author || 'Imam Bukhari'}
         </Text>
+        
         <Image 
           source={require('../assets/images/hadith_caligraphy.png')} 
-          style={styles.headerImage}
+          className="w-40 h-28 mb-6"
           resizeMode="contain"
         />
-        <View style={styles.buttonContainer}>
-          <Button title="Go Home" onPress={() => router.push("/")} />
-          <Button title="Go to Quran" onPress={() => router.push("/quran")} />
+        
+        <View className="flex-row justify-between w-full mb-4">
+          <Pressable 
+            className="bg-blue-500 px-4 py-2 rounded-md"
+            onPress={() => router.push("/")}
+          >
+            <Text className="text-white font-poppinsSemiBold">Go Home</Text>
+          </Pressable>
+          
+          <Pressable 
+            className="bg-blue-500 px-4 py-2 rounded-md"
+            onPress={() => router.push("/quran")}
+          >
+            <Text className="text-white font-poppinsSemiBold">Go to Quran</Text>
+          </Pressable>
         </View>
       </View>
       
       <FlatList
         data={bukhariData?.chapters || []}
         keyExtractor={(item) => item.id.toString()}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
         renderItem={({ item }) => (
           <TouchableOpacity 
-            style={styles.chapterItem}
+            className="p-4 mb-3 bg-white rounded-xl shadow-sm border border-gray-100"
             onPress={() => handleChapterSelect(item)}
           >
-            <Text style={styles.chapterNumber}>Chapter {item.id}</Text>
-            <Text style={styles.chapterItemName}>{item.english}</Text>
-            <Text style={styles.arabicChapterName}>{item.arabic}</Text>
+            <Text className="text-blue-600 font-poppinsSemiBold mb-1">
+              Chapter {item.id}
+            </Text>
+            
+            <Text className="text-lg font-poppins text-gray-800 mb-1">
+              {item.english}
+            </Text>
+            
+            <Text className="text-right text-base text-gray-600" style={{ writingDirection: 'rtl' }}>
+              {item.arabic}
+            </Text>
           </TouchableOpacity>
         )}
       />
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 10,
-  },
-  header: {
-    marginBottom: 15,
-    alignItems: 'center',
-  },
-  headerImage: {
-    width: 200,
-    height: 120,
-    marginVertical: 15,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 5,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingHorizontal: 20,
-    marginTop: 10,
-  },
-  chapterItem: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  chapterNumber: {
-    fontSize: 14,
-    color: '#666',
-  },
-  chapterItemName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  arabicChapterName: {
-    fontSize: 16,
-    textAlign: 'right',
-    marginTop: 5,
-    fontFamily: 'System',
-    color: '#333',
-  },
-  chapterName: {
-    fontSize: 16,
-    color: '#555',
-    marginBottom: 10,
-  },
-  hadithItem: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  hadithNumber: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  narratorPreview: {
-    fontSize: 14,
-    fontStyle: 'italic',
-    marginBottom: 5,
-    color: '#555',
-  },
-  hadithPreview: {
-    fontSize: 14,
-    color: '#333',
-  },
-  hadithContainer: {
-    padding: 15,
-  },
-  narratorText: {
-    fontSize: 16,
-    fontStyle: 'italic',
-    marginBottom: 10,
-    color: '#555',
-  },
-  hadithText: {
-    fontSize: 16,
-    lineHeight: 24,
-    marginVertical: 10,
-  },
-  bookName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  arabicContainer: {
-    marginTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-    paddingTop: 15,
-  },
-  arabicText: {
-    fontSize: 18,
-    lineHeight: 30,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  errorText: {
-    color: 'red',
-    marginBottom: 20,
-  },
-});
