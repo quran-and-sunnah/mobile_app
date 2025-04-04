@@ -1,107 +1,114 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Button, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet, SafeAreaView } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, SafeAreaView, ScrollView, Image, Pressable } from "react-native";
 import { useRouter } from "expo-router";
+import "../global.css";
+
+// Define the types for our data structures
+interface BookMetadata {
+  id: number;
+  length: number;
+  arabic: {
+    title: string;
+    author: string;
+    introduction: string;
+  };
+  english: {
+    title: string;
+    author: string;
+    introduction: string;
+  };
+}
+
+interface Chapter {
+  id: number;
+  bookId: number;
+  arabic: string;
+  english: string;
+}
+
+interface Hadith {
+  id: number;
+  idInBook: number;
+  chapterId: number;
+  bookId: number;
+  arabic: string;
+  english: {
+    narrator: string;
+    text: string;
+  };
+}
+
+interface BukhariCollection {
+  id: number;
+  metadata: BookMetadata;
+  chapters: Chapter[];
+  hadiths: Hadith[];
+}
 
 export default function Hadith() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [collections, setCollections] = useState<{ id: string; name: string; editions: any[] }[]>([]);
-  const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
-  const [hadithData, setHadithData] = useState<HadithData | null>(null);
+  const [bukhariData, setBukhariData] = useState<BukhariCollection | null>(null);
+  const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
+  const [chapterHadiths, setChapterHadiths] = useState<Hadith[]>([]);
   const [selectedHadith, setSelectedHadith] = useState<Hadith | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<'chapters' | 'hadiths' | 'hadith'>('chapters');
 
-  // Fetch available collections
+  // Load Bukhari collection on component mount
   useEffect(() => {
-    const fetchCollections = async () => {
-      try {
-        setLoading(true);
-        // Use the data from the CDN
-        const response = await fetch('https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions.min.json');
-        const data = await response.json();
-        
-        // Convert the data to a more usable format for our UI
-        const collectionsArray = Object.keys(data).map(key => ({
-          id: key,
-          name: data[key].name,
-          editions: data[key].collection
-        }));
-        
-        setCollections(collectionsArray);
-      } catch (err) {
-        console.error('Error fetching collections:', err);
-        setError('Failed to load hadith collections');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCollections();
+    loadBukhariData();
   }, []);
 
-  // Fetch hadiths when a collection is selected
-  interface Hadith {
-    hadithnumber: string;
-    text: string;
-    grade?: string;
-  }
-
-  interface HadithData {
-    hadiths: Record<string, Hadith>;
-  }
-
-  const fetchHadiths = async (collectionId: string, editionName: string): Promise<void> => {
+  // Load data from local JSON file
+  const loadBukhariData = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/${editionName}.min.json`);
-      const data: HadithData = await response.json();
-      setHadithData(data);
-      setLoading(false);
+      const data = require('../assets/bukhari.json');
+      setBukhariData(data);
     } catch (err) {
-      console.error('Error fetching hadiths:', err);
-      setError('Failed to load hadiths');
+      console.error('Error loading Bukhari data:', err);
+      setError(`Failed to load Bukhari collection: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
       setLoading(false);
     }
   };
 
-  interface Collection {
-    id: string;
-    name: string;
-    editions: Edition[];
-  }
-
-  interface Edition {
-    name: string;
-    language: string;
-  }
-
-  const handleCollectionSelect = (collection: Collection): void => {
-    setSelectedCollection(collection);
-    // Find the English edition if available, otherwise use the first one
-    const englishEdition = collection.editions.find((edition: Edition) => edition.language === "English");
-    const editionToUse = englishEdition || collection.editions[0];
-    fetchHadiths(collection.id, editionToUse.name);
+  // Handle chapter selection
+  const handleChapterSelect = (chapter: Chapter) => {
+    setSelectedChapter(chapter);
+    
+    if (bukhariData) {
+      // Filter hadiths for selected chapter
+      const hadiths = bukhariData.hadiths.filter(h => h.chapterId === chapter.id);
+      setChapterHadiths(hadiths);
+      setView('hadiths');
+    }
   };
 
+  // Handle hadith selection
   const handleHadithSelect = (hadith: Hadith) => {
     setSelectedHadith(hadith);
+    setView('hadith');
   };
 
+  // Handle back button
   const handleBack = () => {
-    if (selectedHadith) {
+    if (view === 'hadith') {
       setSelectedHadith(null);
-    } else if (selectedCollection) {
-      setSelectedCollection(null);
-      setHadithData(null);
+      setView('hadiths');
+    } else if (view === 'hadiths') {
+      setSelectedChapter(null);
+      setView('chapters');
     }
   };
 
   // Render loading state
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#0000ff" />
-        <Text>Loading hadith data...</Text>
+      <View className="flex-1 justify-center items-center bg-white">
+        <ActivityIndicator size="large" color="#3b82f6" />
+        <Text className="mt-4 text-gray-700 font-poppinsSemiBold">Loading hadith data...</Text>
       </View>
     );
   }
@@ -109,80 +116,186 @@ export default function Hadith() {
   // Render error state
   if (error) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>{error}</Text>
-        <Button title="Try Again" onPress={() => setError(null)} />
+      <View className="flex-1 justify-center items-center p-4 bg-white">
+        <Text className="text-red-500 mb-4 text-center">{error}</Text>
+        <Pressable 
+          className="bg-blue-500 px-6 py-3 rounded-lg mb-3 w-full"
+          onPress={() => {
+            setError(null);
+            loadBukhariData();
+          }}
+        >
+          <Text className="text-white text-center font-poppinsSemiBold">Try Again</Text>
+        </Pressable>
+        <Pressable 
+          className="bg-gray-100 px-6 py-3 rounded-lg w-full"
+          onPress={() => router.push("/")}
+        >
+          <Text className="text-gray-800 text-center font-poppinsSemiBold">Go Back</Text>
+        </Pressable>
       </View>
     );
   }
 
   // Render single hadith view
-  if (selectedHadith) {
+  if (view === 'hadith' && selectedHadith) {
+    const chapterName = bukhariData?.chapters.find(c => c.id === selectedHadith.chapterId)?.english || '';
+    
     return (
-      <SafeAreaView style={styles.container}>
-        <Button title="Back to List" onPress={handleBack} />
-        <View style={styles.hadithContainer}>
-          <Text style={styles.hadithNumber}>Hadith #{selectedHadith.hadithnumber}</Text>
-          <Text style={styles.hadithText}>{selectedHadith.text}</Text>
-          {selectedHadith.grade && (
-            <Text style={styles.gradeText}>Grade: {selectedHadith.grade}</Text>
+      <SafeAreaView className="flex-1 bg-white">
+        <ScrollView className="flex-1 px-4 py-6">
+          <Pressable 
+            className="mb-4 bg-blue-500 py-2 px-4 rounded-md self-start"
+            onPress={handleBack}
+          >
+            <Text className="text-white font-poppinsSemiBold">← Back</Text>
+          </Pressable>
+          
+          <View className="bg-blue-50 rounded-xl p-5 mb-6 shadow-sm">
+            <Text className="text-blue-800 text-lg font-poppinsSemiBold mb-1">
+              Hadith #{selectedHadith.idInBook}
+            </Text>
+            
+            <Text className="text-lg font-poppinsBold text-gray-800 mb-1">
+              {bukhariData?.metadata.english.title || 'Sahih al-Bukhari'}
+            </Text>
+            
+            <Text className="text-gray-600 font-poppins mb-3">
+              Chapter: {chapterName}
+            </Text>
+          </View>
+          
+          <View className="bg-white rounded-xl p-5 mb-6 shadow-sm border border-gray-100">
+            <Text className="text-gray-600 italic font-poppins mb-4">
+              {selectedHadith.english.narrator}
+            </Text>
+            
+            <Text className="text-gray-800 font-poppins text-base leading-6">
+              {selectedHadith.english.text}
+            </Text>
+          </View>
+          
+          {selectedHadith.arabic && (
+            <View className="bg-gray-50 rounded-xl p-5 mb-4 shadow-sm">
+              <Text className="text-right text-lg leading-8 font-poppins text-gray-800" style={{ writingDirection: 'rtl' }}>
+                {selectedHadith.arabic}
+              </Text>
+            </View>
           )}
-        </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
 
-  // Render hadith list view
-  if (selectedCollection && hadithData) {
-    const hadiths = hadithData.hadiths || [];
+  // Render hadiths list view
+  if (view === 'hadiths' && selectedChapter) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Button title="Back to Collections" onPress={handleBack} />
-          <Text style={styles.title}>{selectedCollection.name}</Text>
+      <SafeAreaView className="flex-1 bg-white">
+        <View className="px-4 pt-6 pb-3 bg-white">
+          <Pressable 
+            className="mb-4 bg-blue-500 py-2 px-4 rounded-md self-start"
+            onPress={handleBack}
+          >
+            <Text className="text-white font-poppinsSemiBold">← Back</Text>
+          </Pressable>
+          
+          <Text className="text-xl font-poppinsBold text-gray-800 text-center">
+            {bukhariData?.metadata.english.title || 'Sahih al-Bukhari'}
+          </Text>
+          
+          <Text className="text-base font-poppins text-gray-600 text-center mb-3">
+            {selectedChapter.english}
+          </Text>
         </View>
         
         <FlatList
-          data={Object.keys(hadiths)}
-          keyExtractor={(item) => item}
-          renderItem={({ item }) => (
-            <TouchableOpacity 
-              style={styles.hadithItem}
-              onPress={() => handleHadithSelect(hadiths[item])}
-            >
-              <Text style={styles.hadithNumber}>Hadith #{item}</Text>
-              <Text style={styles.hadithPreview}>
-                {hadiths[item].text?.substring(0, 100)}...
-              </Text>
-            </TouchableOpacity>
-          )}
+          data={chapterHadiths}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
+          renderItem={({ item }) => {
+            // Limit preview text to avoid excessive length
+            const previewText = item.english.text.length > 120
+              ? item.english.text.substring(0, 120) + '...'
+              : item.english.text;
+            
+            return (
+              <TouchableOpacity 
+                className="p-4 mb-3 bg-white rounded-xl shadow-sm border border-gray-100"
+                onPress={() => handleHadithSelect(item)}
+              >
+                <Text className="text-blue-600 font-poppinsSemiBold mb-2">
+                  Hadith #{item.idInBook}
+                </Text>
+                
+                <Text className="italic text-sm text-gray-600 font-poppins mb-2">
+                  {item.english.narrator}
+                </Text>
+                
+                <Text className="text-gray-700 font-poppins">
+                  {previewText}
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
         />
       </SafeAreaView>
     );
   }
 
-  // Render collections list
+  // Render chapters list view (default view)
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Hadith Collections</Text>
-        <View style={styles.buttonContainer}>
-          <Button title="Go Home" onPress={() => router.push("/")} />
-          <Button title="Go to Quran" onPress={() => router.push("/quran")} />
+    <SafeAreaView className="flex-1 bg-white">
+      <View className="items-center pt-6 pb-3 px-4">
+        <Text className="text-2xl font-poppinsBold text-gray-800 text-center">
+          {bukhariData?.metadata.english.title || 'Sahih al-Bukhari'}
+        </Text>
+        
+        <Text className="text-base font-poppins text-gray-600 mb-4 text-center">
+          by {bukhariData?.metadata.english.author || 'Imam Bukhari'}
+        </Text>
+        
+        <Image 
+          source={require('../assets/images/hadith_caligraphy.png')} 
+          className="w-40 h-28 mb-6"
+          resizeMode="contain"
+        />
+        
+        <View className="flex-row justify-between w-full mb-4">
+          <Pressable 
+            className="bg-blue-500 px-4 py-2 rounded-md"
+            onPress={() => router.push("/")}
+          >
+            <Text className="text-white font-poppinsSemiBold">Go Home</Text>
+          </Pressable>
+          
+          <Pressable 
+            className="bg-blue-500 px-4 py-2 rounded-md"
+            onPress={() => router.push("/quran")}
+          >
+            <Text className="text-white font-poppinsSemiBold">Go to Quran</Text>
+          </Pressable>
         </View>
       </View>
       
       <FlatList
-        data={collections}
-        keyExtractor={(item) => item.id}
+        data={bukhariData?.chapters || []}
+        keyExtractor={(item) => item.id.toString()}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
         renderItem={({ item }) => (
           <TouchableOpacity 
-            style={styles.collectionItem}
-            onPress={() => handleCollectionSelect(item)}
+            className="p-4 mb-3 bg-white rounded-xl shadow-sm border border-gray-100"
+            onPress={() => handleChapterSelect(item)}
           >
-            <Text style={styles.collectionName}>{item.name}</Text>
-            <Text style={styles.editionCount}>
-              {item.editions.length} editions available
+            <Text className="text-blue-600 font-poppinsSemiBold mb-1">
+              Chapter {item.id}
+            </Text>
+            
+            <Text className="text-lg font-poppins text-gray-800 mb-1">
+              {item.english}
+            </Text>
+            
+            <Text className="text-right text-base text-gray-600" style={{ writingDirection: 'rtl' }}>
+              {item.arabic}
             </Text>
           </TouchableOpacity>
         )}
@@ -190,69 +303,3 @@ export default function Hadith() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 10,
-  },
-  header: {
-    marginBottom: 15,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  collectionItem: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  collectionName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  editionCount: {
-    fontSize: 14,
-    color: '#666',
-  },
-  hadithItem: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  hadithNumber: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  hadithPreview: {
-    fontSize: 14,
-    color: '#333',
-  },
-  hadithContainer: {
-    padding: 15,
-  },
-  hadithText: {
-    fontSize: 16,
-    lineHeight: 24,
-    marginVertical: 10,
-  },
-  gradeText: {
-    fontSize: 14,
-    fontStyle: 'italic',
-    marginTop: 10,
-    color: '#666',
-  },
-  errorText: {
-    color: 'red',
-    marginBottom: 20,
-  }
-});
