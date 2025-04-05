@@ -1,0 +1,38 @@
+{
+  "id": 1,
+  "metadata": {
+    "id": 1,
+    "length": 0,
+    "arabic": {
+      "title": "Arabic title",
+      "author": "Arabic author name",
+      "introduction": "Arabic introduction text"
+    },
+    "english": {
+      "title": "English title",
+      "author": "English author name",
+      "introduction": "English introduction text"
+    }
+  },
+  "chapters": [
+    {
+      "id": 1,
+      "bookId": 1,
+      "arabic": "Chapter name in Arabic",
+      "english": "Chapter name in English"
+    }
+  ],
+  "hadiths": [
+    {
+      "id": 1,
+      "idInBook": 1,
+      "chapterId": 1,
+      "bookId": 1,
+      "arabic": "Hadith text in Arabic",
+      "english": {
+        "narrator": "Narrator name",
+        "text": "Hadith text in English"
+      }
+    }
+  ]
+}
