@@ -1,9 +1,5 @@
-import { View, Text, Image, Pressable, SafeAreaView } from "react-native";
+import { View, Text, Pressable, SafeAreaView } from "react-native";
 import { useRouter } from "expo-router";
-
-const QuranCaligraphy = require('../assets/images/quran_caligraphy.png');
-const HadithCaligraphy = require('../assets/images/hadith_caligraphy.png');
-const MasjidImage = require('../assets/images/masjid.png');
 
 export default function Index() {
   const router = useRouter();
@@ -17,65 +13,38 @@ export default function Index() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <View className="flex-1 justify-center items-center">
-        <Text className="text-3xl mb-12 font-poppinsBold text-gray-800 text-center px-6">
+    <SafeAreaView className="flex-1 bg-gray-900">
+      <View className="flex-1 justify-center items-center p-6">
+        <Text className="text-3xl mb-12 font-poppinsBold text-white text-center">
           Islamic Library
         </Text>
         
-        <View className="flex-row px-6 justify-center">
+        <View className="w-full">
           <Pressable 
             onPress={handleQuranPress} 
-            className="items-center mr-6 bg-white p-6 rounded-2xl shadow-lg"
-            style={{
-              shadowColor: '#31A05F',
-              shadowOpacity: 0.2,
-              shadowRadius: 15,
-              elevation: 5
-            }}
+            className="items-center mb-6 bg-gray-800 p-6 rounded-lg"
           >
-            <View className="bg-green-100 rounded-xl p-4 mb-4">
-              <Image 
-                source={QuranCaligraphy} 
-                className="w-[110] h-[110]" 
-                resizeMode="contain" 
-              />
+            <View className="mb-4 w-16 h-16 bg-gray-700 rounded-full items-center justify-center">
+              <Text className="text-white font-poppinsBold text-xl">Q</Text>
             </View>
-            <Text className="font-poppinsSemiBold text-center text-xl text-gray-800">
+            <Text className="font-poppinsSemiBold text-center text-xl text-white">
               Quran
             </Text>
           </Pressable>
 
           <Pressable 
             onPress={handleHadithPress} 
-            className="items-center bg-white p-6 rounded-2xl shadow-lg"
-            style={{
-              shadowColor: '#3B82F6',
-              shadowOpacity: 0.2,
-              shadowRadius: 15,
-              elevation: 5
-            }}
+            className="items-center bg-gray-800 p-6 rounded-lg"
           >
-            <View className="bg-blue-100 rounded-xl p-4 mb-4">
-              <Image 
-                source={HadithCaligraphy} 
-                className="w-[110] h-[110]" 
-                resizeMode="contain" 
-              />
+            <View className="mb-4 w-16 h-16 bg-gray-700 rounded-full items-center justify-center">
+              <Text className="text-white font-poppinsBold text-xl">H</Text>
             </View>
-            <Text className="font-poppinsSemiBold text-center text-xl text-gray-800">
+            <Text className="font-poppinsSemiBold text-center text-xl text-white">
               Hadith
             </Text>
           </Pressable>
         </View>
       </View>
-      
-      <Image 
-        source={MasjidImage} 
-        className="w-[450] h-[280] absolute bottom-0" 
-        resizeMode="stretch"
-        style={{ opacity: 0.8 }}
-      />
     </SafeAreaView>
   );
 }
