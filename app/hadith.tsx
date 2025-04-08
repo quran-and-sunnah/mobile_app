@@ -45,6 +45,13 @@ interface BukhariCollection {
   hadiths: Hadith[];
 }
 
+interface HadithCollection {
+  id: string;
+  name: string;
+  author: string;
+  initial: string;
+}
+
 export default function Hadith() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -56,17 +63,62 @@ export default function Hadith() {
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<'collections' | 'chapters' | 'hadiths' | 'hadith'>('collections');
   
-  // Available hadith collections
-  const collections = [
-    { id: 'bukhari', name: 'Sahih al-Bukhari', author: 'Imam Bukhari' },
-    { id: 'muslim', name: 'Sahih Muslim', author: 'Imam Muslim' },
-    { id: 'nasai', name: 'Sunan an-Nasai', author: 'Imam an-Nasai' },
-    { id: 'abudawud', name: 'Sunan Abu Dawud', author: 'Imam Abu Dawud' },
-    { id: 'tirmidhi', name: 'Jami at-Tirmidhi', author: 'Imam at-Tirmidhi' },
-    { id: 'ibnmajah', name: 'Sunan Ibn Majah', author: 'Imam Ibn Majah' },
-    { id: 'malik', name: 'Muwatta Malik', author: 'Imam Malik' },
-    { id: 'ahmed', name: 'Musnad Ahmad', author: 'Imam Ahmad ibn Hanbal' },
-    { id: 'darimi', name: 'Sunan ad-Darimi', author: 'Imam ad-Darimi' }
+  // Available hadith collections with initials for icons
+  const collections: HadithCollection[] = [
+    { 
+      id: 'bukhari', 
+      name: 'Bukhari', 
+      author: 'Imam Bukhari',
+      initial: 'B'
+    },
+    { 
+      id: 'muslim', 
+      name: 'Muslim', 
+      author: 'Imam Muslim',
+      initial: 'M'
+    },
+    { 
+      id: 'ahmed', 
+      name: 'Ahmed', 
+      author: 'Imam Ahmad ibn Hanbal',
+      initial: 'A'
+    },
+    { 
+      id: 'malik', 
+      name: 'Malik', 
+      author: 'Imam Malik',
+      initial: 'M'
+    },
+    { 
+      id: 'abudawud', 
+      name: 'Abu Dawud', 
+      author: 'Imam Abu Dawud',
+      initial: 'AD'
+    },
+    { 
+      id: 'tirmidhi', 
+      name: 'Tirmidhi', 
+      author: 'Imam at-Tirmidhi',
+      initial: 'T'
+    },
+    { 
+      id: 'ibnmajah', 
+      name: 'Ibn Majah', 
+      author: 'Imam Ibn Majah',
+      initial: 'IM'
+    },
+    { 
+      id: 'nasai', 
+      name: 'An-Nasai', 
+      author: 'Imam an-Nasai',
+      initial: 'N'
+    },
+    { 
+      id: 'darimi', 
+      name: 'Ad-Darimi', 
+      author: 'Imam ad-Darimi',
+      initial: 'D'
+    }
   ];
 
   // Load hadith collection when selected
@@ -200,9 +252,9 @@ export default function Hadith() {
   // Render loading state
   if (loading) {
     return (
-      <View className="flex-1 justify-center items-center bg-gray-50">
-        <ActivityIndicator size="large" color="#3b82f6" />
-        <Text className="mt-4 text-gray-700 font-poppinsSemiBold">Loading hadith data...</Text>
+      <View className="flex-1 justify-center items-center bg-gray-900">
+        <ActivityIndicator size="large" color="#FFFFFF" />
+        <Text className="mt-4 text-white font-poppinsSemiBold">Loading hadith data...</Text>
       </View>
     );
   }
@@ -210,10 +262,10 @@ export default function Hadith() {
   // Render error state
   if (error) {
     return (
-      <View className="flex-1 justify-center items-center p-4 bg-gray-50">
+      <View className="flex-1 justify-center items-center p-4 bg-gray-900">
         <Text className="text-red-500 mb-4 text-center font-poppins">{error}</Text>
         <Pressable 
-          className="bg-blue-500 px-6 py-3 rounded-lg mb-3 w-full"
+          className="bg-gray-700 px-6 py-3 rounded-lg mb-3 w-full"
           onPress={() => {
             setError(null);
             setSelectedCollection(null);
@@ -231,46 +283,27 @@ export default function Hadith() {
     const chapterName = hadithData?.chapters.find(c => c.id === selectedHadith.chapterId)?.english || '';
     
     return (
-      <SafeAreaView className="flex-1 bg-gray-50">
-        <ScrollView className="flex-1 px-5 py-6">
-          <Pressable 
-            className="mb-5 bg-blue-600 py-2 px-5 rounded-full self-start flex-row items-center shadow-sm"
-            style={{ shadowOpacity: 0.1, shadowRadius: 10, elevation: 2 }}
+      <SafeAreaView className="flex-1 bg-gray-900">
+        <View className="bg-gray-900 pt-4 px-4">
+          <TouchableOpacity 
+            className="flex-row items-center mb-4"
             onPress={handleBack}
           >
             <Text className="text-white font-poppinsSemiBold">← Back</Text>
-          </Pressable>
-          
-          <View className="bg-white rounded-xl p-6 mb-6 shadow-md border border-gray-100">
-            <Text className="text-blue-700 text-lg font-poppinsSemiBold mb-1">
-              Hadith #{selectedHadith.idInBook}
+          </TouchableOpacity>
+        </View>
+        
+        <ScrollView className="flex-1 px-4 py-2">
+          <View className="bg-gray-800 rounded p-4 mb-6">
+            <Text className="text-white text-xl font-poppins mb-2 text-center" style={{ writingDirection: 'rtl' }}>
+              {selectedHadith.arabic}
             </Text>
             
-            <Text className="text-lg font-poppinsBold text-gray-800 mb-1">
-              {hadithData?.metadata.english.title || ''}
+            <Text className="text-gray-400 font-poppins mt-4 mb-2">
+              Narrated by
             </Text>
             
-            <Text className="text-gray-600 font-poppins mb-2">
-              Chapter: {chapterName}
-            </Text>
-          </View>
-          
-          {/* Arabic text first */}
-          {selectedHadith.arabic && (
-            <View className="bg-blue-50 rounded-xl p-6 mb-5 shadow-md" style={{ shadowOpacity: 0.05, shadowRadius: 5 }}>
-              <Text className="text-right text-xl leading-10 font-poppins text-gray-800" style={{ writingDirection: 'rtl' }}>
-                {selectedHadith.arabic}
-              </Text>
-            </View>
-          )}
-          
-          {/* English text below */}
-          <View className="bg-white rounded-xl p-6 mb-8 shadow-md border border-gray-100">
-            <Text className="text-gray-600 italic font-poppins mb-4">
-              {selectedHadith.english.narrator}
-            </Text>
-            
-            <Text className="text-gray-800 font-poppins text-base leading-7">
+            <Text className="text-white font-poppins mb-3">
               {selectedHadith.english.text}
             </Text>
           </View>
@@ -281,22 +314,23 @@ export default function Hadith() {
 
   // Render hadiths list view
   if (view === 'hadiths' && selectedChapter) {
+    const collectionTitle = collections.find(c => c.id === selectedCollection)?.name || '';
+    const formattedTitle = hadithData?.metadata.english.title || `Sahih ${collectionTitle}`;
+    
     return (
-      <SafeAreaView className="flex-1 bg-gray-50">
-        <View className="px-5 pt-6 pb-4 bg-white shadow-md">
-          <Pressable 
-            className="mb-4 bg-blue-600 py-2 px-5 rounded-full self-start shadow-sm"
-            style={{ shadowOpacity: 0.1, shadowRadius: 10, elevation: 2 }}
+      <SafeAreaView className="flex-1 bg-gray-900">
+        <View className="px-4 pt-4 pb-2 bg-gray-900">
+          <TouchableOpacity 
+            className="flex-row items-center mb-2"
             onPress={handleBack}
           >
             <Text className="text-white font-poppinsSemiBold">← Back</Text>
-          </Pressable>
+          </TouchableOpacity>
           
-          <Text className="text-xl font-poppinsBold text-gray-800 text-center mb-1">
-            {hadithData?.metadata.english.title || collections.find(c => c.id === selectedCollection)?.name || ''}
+          <Text className="text-xl font-poppinsSemiBold text-white text-center mb-1">
+            {formattedTitle}
           </Text>
-          
-          <Text className="text-base font-poppins text-gray-600 text-center mb-3">
+          <Text className="text-lg font-poppins text-white text-center mb-2">
             {selectedChapter.english}
           </Text>
         </View>
@@ -304,40 +338,21 @@ export default function Hadith() {
         <FlatList
           data={chapterHadiths}
           keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={{ padding: 16 }}
-          renderItem={({ item }) => {
-            // Limit preview text to avoid excessive length
-            const previewText = item.english.text.length > 120
-              ? item.english.text.substring(0, 120) + '...'
-              : item.english.text;
-            
-            return (
-              <TouchableOpacity 
-                className="p-6 mb-4 bg-white rounded-xl shadow-md border border-gray-100"
-                style={{ shadowOpacity: 0.07, shadowRadius: 8, elevation: 2 }}
-                onPress={() => handleHadithSelect(item)}
-              >
-                <View className="flex-row items-center mb-2">
-                  <View className="bg-blue-100 w-8 h-8 rounded-full mr-3 items-center justify-center">
-                    <Text className="text-blue-700 font-poppinsBold text-sm">
-                      {item.idInBook}
-                    </Text>
-                  </View>
-                  <Text className="text-blue-700 font-poppinsSemiBold">
-                    Hadith #{item.idInBook}
-                  </Text>
-                </View>
-                
-                <Text className="italic text-sm text-gray-600 font-poppins mb-3">
-                  {item.english.narrator}
-                </Text>
-                
-                <Text className="text-gray-700 font-poppins leading-6">
-                  {previewText}
-                </Text>
-              </TouchableOpacity>
-            );
-          }}
+          contentContainerStyle={{ padding: 12 }}
+          renderItem={({ item }) => (
+            <TouchableOpacity 
+              className="p-4 mb-3 bg-gray-800 rounded"
+              onPress={() => handleHadithSelect(item)}
+            >
+              <Text className="text-white font-poppins mb-2">
+                Hadith {item.idInBook}: The Prophet (ﷺ) said, "{item.english.text.substring(0, 120)}
+                {item.english.text.length > 120 ? '...' : '"'}
+              </Text>
+              <Text className="text-gray-400 font-poppins text-sm">
+                Reference: {collections.find(c => c.id === selectedCollection)?.name} {item.idInBook}
+              </Text>
+            </TouchableOpacity>
+          )}
         />
       </SafeAreaView>
     );
@@ -345,59 +360,35 @@ export default function Hadith() {
 
   // Render chapters list view
   if (view === 'chapters' && hadithData) {
+    const collectionTitle = collections.find(c => c.id === selectedCollection)?.name || '';
+    const formattedTitle = hadithData?.metadata.english.title || `Sahih ${collectionTitle}`;
+    
     return (
-      <SafeAreaView className="flex-1 bg-gray-50">
-        <View className="items-center pt-6 pb-4 px-5 bg-white shadow-md">
-          <Pressable 
-            className="mb-4 bg-blue-600 py-2 px-5 rounded-full self-start shadow-sm"
-            style={{ shadowOpacity: 0.1, shadowRadius: 10, elevation: 2 }}
+      <SafeAreaView className="flex-1 bg-gray-900">
+        <View className="px-4 pt-4 pb-2 bg-gray-900">
+          <TouchableOpacity 
+            className="flex-row items-center mb-2"
             onPress={handleBack}
           >
             <Text className="text-white font-poppinsSemiBold">← Back</Text>
-          </Pressable>
-        
-          <Text className="text-2xl font-poppinsBold text-gray-800 text-center mb-1">
-            {hadithData?.metadata.english.title || collections.find(c => c.id === selectedCollection)?.name || ''}
-          </Text>
+          </TouchableOpacity>
           
-          <Text className="text-base font-poppins text-gray-600 mb-4 text-center">
-            by {hadithData?.metadata.english.author || collections.find(c => c.id === selectedCollection)?.author || ''}
+          <Text className="text-xl font-poppinsSemiBold text-white text-center mb-4">
+            {formattedTitle}
           </Text>
-          
-          <Image 
-            source={require('../assets/images/hadith_caligraphy.png')} 
-            className="w-36 h-24 mb-3"
-            resizeMode="contain"
-          />
         </View>
         
         <FlatList
           data={hadithData?.chapters || []}
           keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={{ padding: 16 }}
+          contentContainerStyle={{ padding: 12 }}
           renderItem={({ item }) => (
             <TouchableOpacity 
-              className="p-6 mb-4 bg-white rounded-xl shadow-md border border-gray-100"
-              style={{ shadowOpacity: 0.07, shadowRadius: 8, elevation: 2 }}
+              className="p-4 mb-3 bg-gray-800 rounded"
               onPress={() => handleChapterSelect(item)}
             >
-              <View className="flex-row items-center mb-2">
-                <View className="bg-blue-100 w-8 h-8 rounded-full mr-3 items-center justify-center">
-                  <Text className="text-blue-700 font-poppinsBold text-sm">
-                    {item.id}
-                  </Text>
-                </View>
-                <Text className="text-blue-700 font-poppinsSemiBold">
-                  Chapter {item.id}
-                </Text>
-              </View>
-              
-              <Text className="text-lg font-poppins text-gray-800 mb-3">
-                {item.english}
-              </Text>
-              
-              <Text className="text-right text-base text-gray-600 leading-7" style={{ writingDirection: 'rtl' }}>
-                {item.arabic}
+              <Text className="text-white font-poppins">
+                {item.id}: {item.english}
               </Text>
             </TouchableOpacity>
           )}
@@ -408,46 +399,38 @@ export default function Hadith() {
 
   // Render collections list view (default view)
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <View className="items-center pt-8 pb-6 px-5 bg-white shadow-md">
-        <Text className="text-2xl font-poppinsBold text-gray-800 text-center mb-2">
-          Hadith Collections
-        </Text>
-        
-        <Image 
-          source={require('../assets/images/hadith_caligraphy.png')} 
-          className="w-40 h-32 mb-3"
-          resizeMode="contain"
-        />
+    <SafeAreaView className="flex-1 bg-gray-900">
+      <View className="pt-6 pb-4 px-5">
+        <View className="flex-row items-center justify-between mb-4">
+          <TouchableOpacity 
+            onPress={() => router.push("/")}
+            className="px-3 py-2"
+          >
+            <Text className="text-white font-poppinsSemiBold">← Home</Text>
+          </TouchableOpacity>
+          <Text className="text-xl font-poppinsBold text-white">
+            HadithExplorer
+          </Text>
+          <View style={{ width: 50 }}>{/* Empty view for balance */}</View>
+        </View>
       </View>
       
       <ScrollView className="flex-1">
-        <View className="p-6">
+        <View className="p-4">
           {collections.map((collection) => (
             <TouchableOpacity 
               key={collection.id}
-              className="p-6 mb-5 bg-white rounded-xl shadow-md flex-row items-center border border-gray-100"
-              style={{ shadowOpacity: 0.07, shadowRadius: 8, elevation: 2 }}
+              className="p-4 mb-3 bg-gray-800 rounded flex-row items-center"
               onPress={() => handleCollectionSelect(collection.id)}
             >
-              <View 
-                className="bg-blue-100 w-14 h-14 rounded-full mr-4 items-center justify-center"
-                style={{ shadowColor: '#3B82F6', shadowOpacity: 0.1, shadowRadius: 5, elevation: 1 }}
-              >
-                <Text className="text-blue-700 font-poppinsBold text-lg">
-                  {collection.name.charAt(0)}
+              <View className="w-12 h-12 rounded-full mr-4 bg-gray-700 items-center justify-center">
+                <Text className="text-white font-poppinsBold text-lg">
+                  {collection.initial}
                 </Text>
               </View>
-              
-              <View className="flex-1">
-                <Text className="text-lg font-poppinsSemiBold text-gray-800 mb-1">
-                  {collection.name}
-                </Text>
-                
-                <Text className="text-sm font-poppins text-gray-600">
-                  by {collection.author}
-                </Text>
-              </View>
+              <Text className="text-lg font-poppins text-white">
+                {collection.name}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>

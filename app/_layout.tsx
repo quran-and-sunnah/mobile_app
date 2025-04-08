@@ -15,9 +15,11 @@ export default function RootLayout() {
 
   return (
     <Stack screenOptions={{
-      headerStyle: { backgroundColor: '#3b82f6' },
+      headerStyle: { backgroundColor: '#1F1F1F' },
       headerTintColor: '#fff',
       headerTitleStyle: { fontFamily: 'PoppinsSemiBold' },
+      headerShown: false, // Hide the header to use custom headers in each screen
+      contentStyle: { backgroundColor: '#121212' },
     }}>
       <Stack.Screen name="index" options={{ title: "Islamic App" }} />
       <Stack.Screen name="quran" options={{ title: "Quran" }} />
