@@ -1,8 +1,23 @@
 import { View, Text, Pressable, SafeAreaView } from "react-native";
 import { useRouter } from "expo-router";
+import * as Font from 'expo-font';
+import { useEffect, useState } from "react";
 
 export default function Index() {
   const router = useRouter();
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+
+  useEffect(() => {
+    async function loadFonts() {
+      await Font.loadAsync({
+        'Amiri': require('../assets/fonts/Amiri-Regular.ttf'),
+        'Amiri-Bold': require('../assets/fonts/Amiri-Bold.ttf'),
+      });
+      setFontsLoaded(true);
+    }
+    
+    loadFonts();
+  }, []);
 
   const handleQuranPress = () => {
     router.push("/quran");
@@ -11,6 +26,14 @@ export default function Index() {
   const handleHadithPress = () => {
     router.push("/hadith");
   };
+
+  if (!fontsLoaded) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center">
+        <Text className="text-white">Loading...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-gray-900">
