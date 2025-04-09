@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, SafeAreaView, ScrollView, Image, Pressable } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, SafeAreaView, ScrollView, Image, Pressable, I18nManager } from "react-native";
 import { useRouter } from "expo-router";
 import "../global.css";
 
@@ -295,17 +295,33 @@ export default function Hadith() {
         
         <ScrollView className="flex-1 px-4 py-2">
           <View className="bg-gray-800 rounded p-4 mb-6">
-            <Text className="text-white text-xl font-poppins mb-2 text-center" style={{ writingDirection: 'rtl' }}>
-              {selectedHadith.arabic}
-            </Text>
+            <View className="flex w-full items-end">
+              <Text className="text-white text-xl font-poppinsBold mb-4 text-right">
+                {'\u200F' + selectedHadith.arabic + '\u200F'}
+              </Text>
+            </View>
             
-            <Text className="text-gray-400 font-poppins mt-4 mb-2">
-              Narrated by
-            </Text>
+            <View className="border-t border-gray-700 my-3" />
             
-            <Text className="text-white font-poppins mb-3">
-              {selectedHadith.english.text}
-            </Text>
+            <View className="mb-4">
+              <Text className="text-gray-400 font-poppinsSemiBold mb-1">
+                {selectedHadith.english.narrator}
+              </Text>
+              
+              <Text className="text-white font-poppins leading-6 text-left">
+                {selectedHadith.english.text.split('\n').map(line => line.trim()).join(' ')}
+              </Text>
+            </View>
+            
+            <View className="flex-row justify-between items-center mt-2 pt-3 border-t border-gray-700">
+              <Text className="text-gray-400 font-poppins text-sm">
+                {collections.find(c => c.id === selectedCollection)?.name} #{selectedHadith.idInBook}
+              </Text>
+              
+              <TouchableOpacity className="bg-gray-700 px-3 py-1 rounded">
+                <Text className="text-white font-poppins">Share</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -344,12 +360,19 @@ export default function Hadith() {
               className="p-4 mb-3 bg-gray-800 rounded"
               onPress={() => handleHadithSelect(item)}
             >
-              <Text className="text-white font-poppins mb-2">
-                Hadith {item.idInBook}: The Prophet (ﷺ) said, "{item.english.text.substring(0, 120)}
-                {item.english.text.length > 120 ? '...' : '"'}
-              </Text>
+              <View className="mb-2">
+                <Text className="text-gray-400 font-poppinsSemiBold mb-1">
+                  {item.english.narrator}
+                </Text>
+                <Text className="text-white font-poppins text-left">
+                  {(item.english.text.length > 120 
+                    ? item.english.text.substring(0, 120).split('\n').map(line => line.trim()).join(' ') + '...'
+                    : item.english.text.split('\n').map(line => line.trim()).join(' ')
+                  )}
+                </Text>
+              </View>
               <Text className="text-gray-400 font-poppins text-sm">
-                Reference: {collections.find(c => c.id === selectedCollection)?.name} {item.idInBook}
+                {collections.find(c => c.id === selectedCollection)?.name} #{item.idInBook}
               </Text>
             </TouchableOpacity>
           )}
