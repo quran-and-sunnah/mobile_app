@@ -303,13 +303,160 @@ export default function Hadith() {
             
             <View className="border-t border-gray-700 my-3" />
             
-            <View className="mb-4">
-              <Text className="text-gray-400 font-poppinsSemiBold mb-1">
+            <View className="my-4">
+              <Text className="text-md text-gray-500 font-poppins">
                 {selectedHadith.english.narrator}
               </Text>
               
-              <Text className="text-white font-poppins leading-6 text-left">
-                {selectedHadith.english.text.split('\n').map(line => line.trim()).join(' ')}
+              <Text className="text-gray-400 font-poppins leading-6 text-left">
+                {(() => {
+                  // Remove newlines and normalize spacing
+                  const text = selectedHadith.english.text.split('\n').map(line => line.trim()).join(' ');
+                  
+                  // These patterns are good indicators of the Prophet's speech
+                  const prophetIndicators = [
+                    /The Prophet\s*(?:\(ﷺ\)|ﷺ|\(peace be upon him\))?\s*(?:replied|said|answered|asked)[:,"']/i,
+                    /Allah's Messenger\s*(?:\(ﷺ\)|ﷺ|\(peace be upon him\))?\s*(?:replied|said|answered|asked)[:,"']/i,
+                    /The Messenger of Allah\s*(?:\(ﷺ\)|ﷺ|\(peace be upon him\))?\s*(?:replied|said|answered|asked)[:,"']/i,
+                    /Messenger of Allah\s*(?:\(ﷺ\)|ﷺ|\(peace be upon him\))?\s*(?:replied|said|answered|asked)[:,"']/i,
+                    /He\s+(?:replied|said|answered|asked)[:,"']/i,
+                    /I heard Allah's Messenger/i,
+                    /I heard the Prophet/i
+                  ];
+                  
+                  // Generic patterns that indicate end of speech
+                  const endOfSpeechPatterns = [
+                    // Quote ending followed by narrative
+                    /["']\.?\s+[A-Z]/i,  
+                    
+                    // Named person speaking (any name)
+                    /\b[A-Z][a-z]+\s+(?:replied|said|answered|added|narrated)/i,
+                    
+                    // New narrative section
+                    /\.\s+Then\b/i,
+                    
+                    // References to verses or citations
+                    /\([0-9\.]+[,\s]*[0-9\.]+\)/,
+                    
+                    // Clear narrative transitions
+                    /\.\s+(?:After|When|Later|Subsequently)/i
+                  ];
+                  
+                  // Function to check if a segment is the Prophet's speech
+                  const containsProphetIndicator = (segment: string): boolean => {
+                    return prophetIndicators.some(pattern => pattern.test(segment));
+                  };
+                  
+                  // Function to check if a segment indicates end of speech
+                  const isEndOfSpeech = (segment: string): boolean => {
+                    return endOfSpeechPatterns.some(pattern => pattern.test(segment));
+                  };
+                  
+                  // Define a pattern for sentences
+                  const sentencePattern = /([^.!?]+[.!?]+\s*)/g;
+                  let sentences: string[] = [];
+                  let match;
+                  
+                  // Split text into sentences
+                  while ((match = sentencePattern.exec(text)) !== null) {
+                    sentences.push(match[0]);
+                  }
+                  
+                  // If the pattern didn't match everything, add the remainder
+                  if (sentences.join('').length < text.length) {
+                    sentences.push(text.substring(sentences.join('').length));
+                  }
+                  
+                  // If no sentences were found, just return the text
+                  if (sentences.length === 0) {
+                    return <Text>{text}</Text>;
+                  }
+                  
+                  // Process each sentence
+                  let inProphetSpeech = false;
+                  let quoteDepth = 0; // Track nested quotes
+                  
+                  return sentences.map((sentence, index) => {
+                    // Check for end of speech patterns
+                    if (inProphetSpeech && isEndOfSpeech(sentence)) {
+                      inProphetSpeech = false;
+                      quoteDepth = 0;
+                      return <Text key={index}>{sentence}</Text>;
+                    }
+                    
+                    // Check for "heard" patterns which have the quotes at the end
+                    if (/I heard.*saying,\s*["']/i.test(sentence)) {
+                      const parts = sentence.split(/saying,\s*/i);
+                      if (parts.length > 1) {
+                        inProphetSpeech = true;
+                        quoteDepth = 1; // We're now in a quote
+                        
+                        // Find the position of the first quote in the second part
+                        const secondPart = parts[1];
+                        
+                        return (
+                          <Text key={index}>
+                            <Text>{parts[0] + "saying, "}</Text>
+                            <Text style={{color: 'white', fontFamily: 'Poppins-Bold'}}>{secondPart}</Text>
+                          </Text>
+                        );
+                      }
+                    }
+                    // Check if this sentence is or contains a Prophet indicator
+                    else if (containsProphetIndicator(sentence)) {
+                      // This sentence has an indicator, next sentences will be the Prophet's speech
+                      inProphetSpeech = true;
+                      
+                      // Count quotes in this sentence to track quote depth
+                      const openQuotes = (sentence.match(/["']/g) || []).length;
+                      quoteDepth = openQuotes % 2; // 1 if we're in an open quote, 0 if closed
+                      
+                      // For sentences with indicators, find the part after the indicator
+                      for (const pattern of prophetIndicators) {
+                        const parts = sentence.split(pattern);
+                        if (parts.length > 1) {
+                          const beforeSpeech = parts[0];
+                          const prophetSpeech = parts.slice(1).join('');
+                          
+                          return (
+                            <Text key={index}>
+                              <Text>{beforeSpeech}</Text>
+                              <Text style={{color: 'white', fontFamily: 'Poppins-Bold'}}>{prophetSpeech}</Text>
+                            </Text>
+                          );
+                        }
+                      }
+                      
+                      // If we get here, just return the sentence normally
+                      return <Text key={index}>{sentence}</Text>;
+                    }
+                    // Check for quote markers to track quote depth
+                    else if (inProphetSpeech) {
+                      // Count quotes in this sentence
+                      const quotes = sentence.match(/["']/g) || [];
+                      for (const quote of quotes) {
+                        quoteDepth = 1 - quoteDepth; // Toggle between 0 and 1
+                      }
+                      
+                      // End of a quote and no more quotes open
+                      if (quoteDepth === 0 && 
+                          (sentence.trim().endsWith('"') || sentence.trim().endsWith("'")) &&
+                          (quotes.length % 2 === 0)) {
+                        // This is the last sentence in the quote
+                        const result = <Text key={index} style={{color: 'white', fontFamily: 'Poppins-Bold'}}>{sentence}</Text>;
+                        inProphetSpeech = false;
+                        return result;
+                      }
+                      
+                      // Still in Prophet's speech
+                      return <Text key={index} style={{color: 'white', fontFamily: 'Poppins-Bold'}}>{sentence}</Text>;
+                    }
+                    // Not the Prophet's speech
+                    else {
+                      return <Text key={index}>{sentence}</Text>;
+                    }
+                  });
+                })()}
               </Text>
             </View>
             
