@@ -51,14 +51,15 @@ const SearchBar: React.FC<SearchBarProps> = ({
       />
       
       {searchQuery.length > 0 && !isLoading && (
-        <TouchableOpacity onPress={() => setSearchQuery("")} className="p-1">
+        <TouchableOpacity onPress={() => setSearchQuery("")} className="p-1 mr-4">
           <Ionicons name="close-circle" size={20} color="#9CA3AF" />
         </TouchableOpacity>
       )}
       
       {showCancel && (
-        <TouchableOpacity onPress={handleCancel} className="ml-2" disabled={isLoading}>
-          <Text className={`font-poppins ${isLoading ? "text-gray-600" : "text-gray-400"}`}>
+        <TouchableOpacity onPress={handleCancel} className="ml-2 px-2" disabled={isLoading}>
+          <Text 
+            className={`font-poppins ${isLoading ? "text-gray-600" : "text-gray-400"}`}>
             Cancel
           </Text>
         </TouchableOpacity>
