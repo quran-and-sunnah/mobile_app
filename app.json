@@ -1,10 +1,17 @@
 {
   "expo": {
     "extra": {
-      "fonts": "assets/fonts/"
+      "fonts": "assets/fonts/",
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "7e577f10-484b-4ecd-8286-ce379e20a6fb"
+      }
     },
-    "name": "mobile_app",
-    "slug": "mobile_app",
+    "name": "Islamic Library",
+    "slug": "islamic-library",
+    "description": "A collection of Islamic books and resources",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -40,6 +47,7 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "owner": "ayoubrached"
   }
 }
