@@ -236,27 +236,80 @@ export default function Hadith() {
       } else {
         // When on collections page, search across all collections
         searchCollections = collections.map(c => c.id);
+        
+        // For searching in specific collections only, use this:
+        // searchCollections = ['bukhari', 'muslim'];
       }
       
       const results: SearchResult[] = [];
       
+      // Create a modified version of loadHadithData that doesn't change view
+      const loadCollectionForSearch = async (collectionId: string): Promise<BukhariCollection | null> => {
+        try {
+          // Check if already loaded
+          if (loadedCollections[collectionId]) {
+            return loadedCollections[collectionId];
+          }
+          
+          let data;
+          try {
+            switch (collectionId) {
+              case 'bukhari':
+                data = require('../assets/bukhari.json');
+                break;
+              case 'muslim':
+                data = require('../assets/muslim.json');
+                break;
+              case 'nasai':
+                data = require('../assets/nasai.json');
+                break;
+              case 'abudawud':
+                data = require('../assets/abudawud.json');
+                break;
+              case 'tirmidhi':
+                data = require('../assets/tirmidhi.json');
+                break;
+              case 'ibnmajah':
+                data = require('../assets/ibnmajah.json');
+                break;
+              case 'malik':
+                data = require('../assets/malik.json');
+                break;
+              case 'ahmed':
+                data = require('../assets/ahmed.json');
+                break;
+              case 'darimi':
+                data = require('../assets/darimi.json');
+                break;
+              default:
+                throw new Error(`Unknown collection: ${collectionId}`);
+            }
+          } catch (e) {
+            console.error(`Collection ${collectionId} not available for search:`, e);
+            return null;
+          }
+          
+          if (!data) {
+            return null;
+          }
+          
+          // Update the loaded collections (without using setState which is async)
+          const updatedCollections = {
+            ...loadedCollections,
+            [collectionId]: data
+          };
+          setLoadedCollections(updatedCollections);
+          
+          return data;
+        } catch (err) {
+          console.error(`Error loading ${collectionId} for search:`, err);
+          return null;
+        }
+      };
+      
       // Load and search through each collection
       for (const collectionId of searchCollections) {
-        let collectionData: BukhariCollection;
-        
-        // Check if already loaded
-        if (loadedCollections[collectionId]) {
-          collectionData = loadedCollections[collectionId];
-        } else {
-          try {
-            // Load the collection
-            await loadHadithData(collectionId);
-            collectionData = loadedCollections[collectionId];
-          } catch (err) {
-            console.error(`Error loading ${collectionId} for search:`, err);
-            continue; // Skip this collection if can't load
-          }
-        }
+        const collectionData = await loadCollectionForSearch(collectionId);
         
         if (!collectionData) continue;
         
@@ -425,6 +478,7 @@ export default function Hadith() {
             placeholder="Search hadiths..."
             onCancel={handleCancelSearch}
             showCancel={true}
+            isLoading={searchLoading}
           />
           
           <Text className="text-gray-400 font-poppins mb-2">
@@ -491,64 +545,6 @@ export default function Hadith() {
     );
   }
 
-  // Render hadiths list view
-  if (view === 'hadiths' && selectedChapter) {
-    const collectionTitle = collections.find(c => c.id === selectedCollection)?.name || '';
-    const formattedTitle = hadithData?.metadata.english.title || `Sahih ${collectionTitle}`;
-    
-    return (
-      <SafeAreaView className="flex-1 bg-gray-900">
-        <View className="px-4 pt-4 pb-2 bg-gray-900">
-          <TouchableOpacity 
-            className="flex-row items-center mb-2"
-            onPress={handleBack}
-          >
-            <Text className="text-white font-poppinsSemiBold">← Back</Text>
-          </TouchableOpacity>
-          
-          <Text className="text-xl font-poppinsSemiBold text-white text-center mb-1">
-            {formattedTitle}
-          </Text>
-          <Text className="text-lg font-poppins text-white text-center mb-2">
-            {selectedChapter.english}
-          </Text>
-          
-          <SearchBar
-            onSearch={handleSearch}
-            placeholder="Search hadiths..."
-          />
-        </View>
-        
-        <FlatList
-          data={chapterHadiths}
-          keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={{ padding: 12 }}
-          renderItem={({ item }) => (
-            <TouchableOpacity 
-              className="p-4 mb-3 bg-gray-800 rounded"
-              onPress={() => handleHadithSelect(item)}
-            >
-              <View className="mb-2">
-                <Text className="text-gray-400 font-poppinsSemiBold mb-1">
-                  {item.english.narrator}
-                </Text>
-                <Text className="text-white font-poppins text-left">
-                  {(item.english.text.length > 120 
-                    ? item.english.text.substring(0, 120).split('\n').map(line => line.trim()).join(' ') + '...'
-                    : item.english.text.split('\n').map(line => line.trim()).join(' ')
-                  )}
-                </Text>
-              </View>
-              <Text className="text-gray-400 font-poppins text-sm">
-                {collections.find(c => c.id === selectedCollection)?.name} #{item.idInBook}
-              </Text>
-            </TouchableOpacity>
-          )}
-        />
-      </SafeAreaView>
-    );
-  }
-
   // Render chapters list view
   if (view === 'chapters' && hadithData) {
     const collectionTitle = collections.find(c => c.id === selectedCollection)?.name || '';
@@ -571,6 +567,7 @@ export default function Hadith() {
           <SearchBar
             onSearch={handleSearch}
             placeholder="Search hadiths..."
+            isLoading={searchLoading}
           />
         </View>
         
@@ -613,6 +610,7 @@ export default function Hadith() {
         <SearchBar
           onSearch={handleSearch}
           placeholder="Search all hadiths..."
+          isLoading={searchLoading}
         />
       </View>
       
