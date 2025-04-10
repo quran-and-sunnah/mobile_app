@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, FlatList, TouchableOpacity } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator } from "react-native";
 
 interface SearchResult {
   id: number;
@@ -26,8 +26,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({
 }) => {
   if (loading) {
     return (
-      <View className="flex-1 justify-center items-center">
-        <Text className="text-white font-poppins">Searching...</Text>
+      <View className="flex-1 justify-center items-center p-4">
+        <ActivityIndicator size="large" color="#FFFFFF" />
+        <Text className="text-white font-poppins mt-4">Searching...</Text>
       </View>
     );
   }
@@ -65,8 +66,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({
           
           <Text className="text-white font-poppins text-left">
             {item.text.length > 120 
-              ? item.text.substring(0, 120) + '...'
-              : item.text
+              ? item.text.substring(0, 120).split('\n').map(line => line.trim()).join(' ') + '...'
+              : item.text.split('\n').map(line => line.trim()).join(' ')
             }
           </Text>
         </TouchableOpacity>
