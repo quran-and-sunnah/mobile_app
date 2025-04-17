@@ -1,147 +1,121 @@
-# Welcome to your Expo app 👋
+# Islamic Library
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A mobile application built with React Native (Expo Go) and a Python FastAPI backend for browsing and searching through multiple Hadith collections. Features both standard keyword search and AI-powered semantic search.
 
-## Get started
+## Features
 
-1. Install dependencies
+* Browse Hadith collections (Bukhari, Muslim, Abu Dawud, etc.) by chapter.
+* Read Hadith text in English and Arabic.
+* Keyword search across all loaded collections.
+* AI-powered Semantic Search (toggleable) for finding Hadith based on meaning and context.
 
-   ```bash
-   npm install
-   ```
+## Prerequisites
 
-2. Start the app
-
-   ```bash
-    npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
-
-# Hadith Semantic Search
-
-A mobile app that provides semantic search capabilities for Hadith collections.
+* **Node.js** (LTS version recommended) and **npm** or **yarn**.
+* **Python** (3.9 or later recommended).
+* **pip** (Python package installer).
+* **Git**.
+* **Expo Go App** installed on your iOS or Android device for running the frontend.
+* **(Optional) NVIDIA GPU with CUDA:** Required *only* if you intend to re-train the AI model or run backend inference on the GPU (currently configured for CPU inference).
 
 ## Project Structure
 
-```
-.
-├── backend/                 # FastAPI backend
-│   ├── main.py             # API endpoints
-│   ├── models/             # ML models and embeddings
-│   ├── data/               # Hadith data
-│   ├── requirements.txt    # Python dependencies
-│   ├── .env.example        # Environment variables
-│   └── start.sh            # Server startup script
-└── mobile/                 # React Native mobile app
-    ├── src/                # Source code
-    ├── components/         # UI components
-    └── api/                # API client
-```
+mobile_app/
+├── assets/         # App assets (fonts, images, hadith JSONs)
+├── backend/        # FastAPI server code, requirements, index files
+├── components/     # React Native components
+├── app/            # Expo app screens/routing
+├── training/       # Python scripts & source data for AI model training
+│   ├── hadith-semantic-model-labse_checkpoints/ # Downloaded model checkpoints go here
+│   └── hadiths.json      # Downloaded full dataset goes here
+├── .gitignore
+├── package.json
+├── README.md
 
-## Development Setup
+## Setup Instructions
 
-### Backend
+1.  **Clone the Repository:**
+    ```bash
+    git clone https://github.com/quran-and-sunnah/mobile_app.git
+    cd mobile_app # Or your project's root directory name
+    ```
 
-1. Create and activate virtual environment:
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
+2.  **Download Large Files:**
+    * The fine-tuned AI model, search index, and full dataset are too large for the repository. Download them from Google Drive:
+        https://drive.google.com/drive/folders/1FWNDtb13-MftLxwhyWmTbnTAKiAFPYFp?usp=sharing * You should have downloaded:
+        * A zip file like `checkpoint-2367.zip` (the best LaBSE model checkpoint).
+        * `hadith_index.faiss`
+        * `index_mapping.json`
+        * `hadiths.json`
 
-2. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+3.  **Place Downloaded Files:**
+    * Unzip `checkpoint-2367.zip`.
+    * Place the resulting `checkpoint-2367` **folder** inside the `training/hadith-semantic-model-labse_checkpoints/` directory. (Create the parent directories `training/hadith-semantic-model-labse_checkpoints/` if they don't exist after cloning).
+    * Place `hadith_index.faiss` inside the `backend/` directory.
+    * Place `index_mapping.json` inside the `backend/` directory.
+    * Place `hadiths.json` inside the `training/` directory.
 
-3. Copy environment file:
-```bash
-cp .env.example .env
-```
+4.  **Frontend Setup:**
+    * Navigate to the project root directory (where `package.json` is).
+    * Install Node.js dependencies:
+        ```bash
+        npm install
+        # OR
+        # yarn install
+        ```
 
-4. Start the server:
-```bash
-./start.sh
-```
+5.  **Backend Setup:**
+    * Navigate to the backend directory:
+        ```bash
+        cd backend
+        ```
+    * Create and activate a Python virtual environment:
+        ```bash
+        # Windows
+        python -m venv .venv
+        .\.venv\Scripts\activate
 
-The API will be available at:
-- Local development: `http://localhost:8000`
-- Android emulator: `http://10.0.2.2:8000`
-- iOS simulator: `http://localhost:8000`
+        # macOS / Linux
+        python3 -m venv .venv
+        source .venv/bin/activate
+        ```
+    * Install Python dependencies:
+        ```bash
+        pip install -r requirements.txt
+        ```
+        *(Note: This will install PyTorch, Sentence-Transformers, FAISS-CPU (usually), FastAPI, Uvicorn etc.)*
 
-### Mobile App
+## Running the Application
 
-1. Install dependencies:
-```bash
-cd mobile
-npm install
-```
+You need to run both the backend server and the frontend app.
 
-2. Configure API URL in environment:
-```bash
-cp .env.example .env
-```
+1.  **Start the Backend Server:**
+    * Open a terminal, navigate to the `backend/` directory.
+    * Make sure your Python virtual environment (`.venv`) is activated.
+    * Run the FastAPI server:
+        ```bash
+        # Recommended for development (auto-reloads on code change)
+        uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
-3. Start the development server:
-```bash
-npm start
-```
+        # Or without reload
+        # python main.py
+        ```
+    * The server should start and log that it has successfully loaded the model, index, and mapping files. It will be accessible at `http://YOUR_LOCAL_IP:8000`.
 
-## Deployment
+2.  **Start the Frontend App:**
+    * Open a *new* terminal, navigate to the project root directory (where `package.json` is).
+    * Run the Expo development server:
+        ```bash
+        npx expo start
+        ```
+    * Wait for the Metro bundler to start and display a QR code.
+    * Open the **Expo Go** app on your physical device (iOS or Android).
+    * Scan the QR code displayed in the terminal.
+    * The app should build and load on your device. Ensure your device is on the **same Wi-Fi network** as the computer running the backend server. The app should automatically detect the backend's IP address.
 
-### Backend
-1. Deploy FastAPI backend to cloud service (e.g., Heroku, AWS, GCP)
-2. Update mobile app's production API URL
+## Using the App
 
-### Mobile App
-1. Build and deploy to app stores
-2. Configure production API URL
-
-## API Endpoints
-
-- `GET /search?query={text}`: Semantic search endpoint
-- `GET /health`: Health check endpoint
-
-## Environment Variables
-
-### Backend
-- `ENV`: Environment (development/production)
-- `DEV_API_URL`: Development API URL
-- `ANDROID_EMULATOR_API_URL`: Android emulator API URL
-- `IOS_SIMULATOR_API_URL`: iOS simulator API URL
-- `PROD_API_URL`: Production API URL
-
-### Mobile App
-- `API_URL`: Current environment API URL
+* Browse collections and chapters.
+* Read hadiths.
+* Use the search bar for keyword search (default).
+* Toggle "AI Search" on for semantic search using the fine-tuned LaBSE model.
