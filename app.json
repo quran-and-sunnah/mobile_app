@@ -11,8 +11,6 @@
       "API_URL": "http://localhost:8000",
       "ENV": "development"
     },
-      }
-    },
     "name": "Islamic Library",
     "slug": "islamic-library",
     "description": "A collection of Islamic books and resources",
