@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Link } from 'expo-router';
 import { TouchableOpacity, StyleSheet } from 'react-native';
 
+
 export default function Index() {
   const router = useRouter();
   const [fontsLoaded, setFontsLoaded] = useState(false);
