@@ -5,9 +5,9 @@ import "../global.css";
 import SearchBar from "../components/SearchBar";
 import SearchResults from "../components/SearchResults";
 import Constants from "expo-constants";
-
 const host = Constants.expoConfig?.hostUri?.split(":")[0];
 const API_URL = `http://${host}:8000`;
+
 
 // Function to normalize Arabic text by removing diacritics
 const normalizeArabicText = (text: string): string => {
@@ -166,7 +166,6 @@ export default function Hadith() {
     collection: null,
     collectionData: null
   });
-
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isAISearch, setIsAISearch] = useState(false);
@@ -577,6 +576,7 @@ export default function Hadith() {
   };
   
 
+
   // Handle search result selection with direct navigation
   const handleSearchResultSelect = async (result: SearchResult) => {
     try {
@@ -723,6 +723,7 @@ export default function Hadith() {
       // Don't clear results when pressing back, just go to collections or previous view
       setAllSearchResults([]); // Clear results when explicitly going back FROM search results
       setCurrentPage(1);
+
       if (selectedCollection && hadithData) {
         if (selectedChapter) {
           setView('hadiths');
@@ -739,6 +740,7 @@ export default function Hadith() {
   const handleCancelSearch = () => {
     setAllSearchResults([]);
     setCurrentPage(1);
+
     if (selectedCollection && hadithData) {
       if (selectedChapter) {
         setView('hadiths');

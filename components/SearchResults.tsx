@@ -72,6 +72,7 @@ interface SearchResult {
   text: string; // English text
   narrator: string;
   arabicText: string; // Original Arabic text
+
 }
 
 interface SearchResultsProps {

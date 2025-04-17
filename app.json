@@ -11,8 +11,10 @@
       "API_URL": "http://localhost:8000",
       "ENV": "development"
     },
-    "name": "Hadith Search",
-    "slug": "hadith-search",
+      }
+    },
+    "name": "Islamic Library",
+    "slug": "islamic-library",
     "description": "A collection of Islamic books and resources",
     "version": "1.0.0",
     "orientation": "portrait",
