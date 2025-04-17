@@ -1,4 +1,4 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+# .gitignore
 
 # dependencies
 node_modules/
@@ -35,8 +35,54 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# Example project included with create-expo-app
 app-example
 
-training/
+# Python / Backend / Training Specific #
+#######################################
+
+# Python virtual environments (Root, Backend, Training)
+.venv/ 
+backend/.venv/
+training/.venv/
+
+# Python Cache
+__pycache__/
+*.py[cod] # .pyc, .pyo, .pyd
+
+# Trained Models & Checkpoints (in training dir)
+training/hadith-semantic-model-*/
+training/hadith-semantic-model-*_checkpoints/
+
+# Old/Other Model folders (potentially at root)
+hadith-semantic-model*/
+
+# Generated Index Files in Backend
 backend/hadith_index.faiss
-assets/*.json
+backend/index_mapping.json
+
+# Ignore any eval results saved directly in model folders
+training/**/eval/
+
+# Large Data Files (Consider Git LFS or other storage if needed)
+training/hadiths.json
+training/hadiths_normalized.json # If you generate this
+
+# Other files to ignore
+model_training.txt 
+
+training/abudawud.json
+training/ahmed.json
+training/bukhari.json
+training/darimi.json
+training/ibnmajah.json
+training/malik.json
+training/muslim.json
+training/nasai.json
+training/tirmidhi.json 
+ios/
+android/ 
+# NOTE: assets/*.json was removed. Track individual asset files.
+# If specific large JSON files exist in assets/ add rules for them:
+# assets/hadiths.json 
+# assets/hadiths_normalized.json
