@@ -4,6 +4,10 @@ import { useRouter } from "expo-router";
 import "../global.css";
 import SearchBar from "../components/SearchBar";
 import SearchResults from "../components/SearchResults";
+import Constants from "expo-constants";
+
+const host = Constants.expoConfig?.hostUri?.split(":")[0];
+const API_URL = `http://${host}:8000`;
 
 // Function to normalize Arabic text by removing diacritics
 const normalizeArabicText = (text: string): string => {
@@ -21,6 +25,24 @@ const normalizeArabicText = (text: string): string => {
   normalized = normalized.replace(/ة/g, 'ه');
   
   return normalized;
+};
+
+// Function to normalize collection names consistently
+const normalizeCollectionName = (name: string): string => {
+  // Remove spaces, hyphens, and apostrophes (matching Python regex)
+  return name.toLowerCase().replace(/[\s\-\']/g, '');
+};
+
+const isArabicText = (text: string): boolean => {
+  // Arabic Unicode range (approximate)
+  const arabicPattern = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+  // Check if the text contains Arabic characters
+  return arabicPattern.test(text);
+};
+
+const escapeRegExp = (string: string): string => {
+  // $& means the whole matched string
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); 
 };
 
 // Canonical names for collections
@@ -44,7 +66,12 @@ const collectionConversion: { [key: string]: string } = {
   "sunanalnasa'i": "nasai",
   "sunanalnasai": "nasai",
   "jamialtirmidhi": "tirmidhi",
-  // Add any other variants you observe.
+  "sahihalbukhari": "bukhari",
+  "sahihmuslim": "muslim",
+  "musnadahmadibnhanbal": "ahmed",
+  "musnadahmad": "ahmed",          // Add other potential variations just in case
+  "sunanaldarimi": "darimi",       // Map API result to internal key
+  "aldarimi": "darimi",
 };
 
 // Define the types for our data structures
@@ -355,100 +382,175 @@ export default function Hadith() {
   }, [allSearchResults, pageSize]);
 
   // Modified search functionality
+  // Modified search functionality
   const handleSearch = async (query: string) => {
+    // Detect language for potential API use and normalization logic
+    const detectedLanguage = isArabicText(query) ? 'arabic' : 'english';
+    let queryToSend = query; // Use original query for potential API call if not Arabic
+
+    // Normalize query if it's Arabic (for both API and local search)
+    if (isArabicText(query)) {
+      queryToSend = normalizeArabicText(query);
+    }
+    
+    // --- AI Semantic Search Branch ---
     if (isAISearch) {
       setSearchLoading(true);
       setError(null);
       try {
         // Make a POST request to your semantic search API
-        const response = await fetch("http://localhost:8000/search", {
+        const response = await fetch(`${API_URL}/search`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query, top_k: 5 })
+          body: JSON.stringify({ 
+            query: queryToSend, // Send potentially normalized Arabic query
+            top_k: 50, // Retrieve more results for potentially better enrichment
+            language: detectedLanguage // Send detected language of the query
+          })
         });
         
         if (!response.ok) {
-          throw new Error(`Server error: ${response.statusText}`);
+          throw new Error(`Server error: ${response.statusText} (${response.status})`);
         }
         
         const data = await response.json();
         
         // Map the AI API results into the SearchResult shape
         const mappedResults: SearchResult[] = data.results.map((item: any) => {
-          // Normalize the returned collection string: lowercase and remove spaces.
-          const rawCollectionKey = item.collection.toLowerCase().replace(/\s+/g, '');
-          // Convert it using the conversion dictionary (if needed)
+          const rawCollectionKey = normalizeCollectionName(item.collection || "unknown");
           const finalCollectionKey = collectionConversion[rawCollectionKey] || rawCollectionKey;
-          // Get the canonical collection name
-          const canonicalName = canonicalCollectionNames[finalCollectionKey] || item.collection;
+          const canonicalName = canonicalCollectionNames[finalCollectionKey] || item.collection || "Unknown";
           
+          // Ensure ID is parsed correctly, handle potential errors
+          let parsedId = parseInt(item.id);
+          if (isNaN(parsedId)) {
+              console.warn(`Invalid ID received from API: ${item.id}. Assigning temporary ID.`);
+              // Assign a temporary unique key if ID is missing or invalid - adjust as needed
+              parsedId = Math.random() * -1000000; // Example temporary ID
+          }
+
           return {
-            id: parseInt(item.id),
+            id: parsedId, 
             collectionId: finalCollectionKey,
             collectionName: canonicalName,
-            bookId: 0,       // default; will try to enrich below
-            chapterId: 0,    // default
-            chapterName: "", // default
-            idInBook: 0,     // default (hadith number)
-            text: item.text,
-            narrator: "",
-            arabicText: ""
+            // Enrich these fields later from loadedCollections
+            bookId: 0,   
+            chapterId: 0,  
+            chapterName: "", 
+            idInBook: item.idInBook || 0, 
+            text: item.text || "", // Use text from API if available
+            narrator: "", 
+            arabicText: "" 
           };
         });
         
-        // Now try to enrich each AI result with full hadith info
-        for (let result of mappedResults) {
-          const collectionData = loadedCollections[result.collectionId];
-          if (collectionData) {
-            // Find the full hadith using the id
-            const fullHadith = collectionData.hadiths.find(h => h.id === result.id);
-            if (fullHadith) {
-              result.idInBook = fullHadith.idInBook;
-              result.bookId = fullHadith.bookId;
-              result.chapterId = fullHadith.chapterId;
-              const chapter = collectionData.chapters.find(c => c.id === fullHadith.chapterId);
-              result.chapterName = chapter ? chapter.english : "";
-              result.narrator = fullHadith.english.narrator;
-              result.arabicText = fullHadith.arabic;
-            }
-          }
-        }
+        // Now try to enrich each AI result with full hadith info from preloaded data
+        let matchCount = 0;
+        let mismatchCount = 0;
         
-        setAllSearchResults(mappedResults);
-        setCurrentPage(1); // Reset to first page
-        setSearchQuery(query);
+        const enrichedResults = mappedResults.map(result => {
+            // Ensure collectionId is valid before trying to access loadedCollections
+            if (!result.collectionId || !loadedCollections[result.collectionId]) {
+                 console.warn(`Collection data not loaded or invalid collectionId for API result: ${result.collectionId}`);
+                 return result; // Return basic result if collection data isn't available
+            }
+
+            const collectionData = loadedCollections[result.collectionId];
+            
+            // Try finding by ID returned from API
+            let fullHadith = collectionData.hadiths.find(h => h.id === result.id);
+            
+            // Fallback strategy 1: Try matching by idInBook if primary ID failed and idInBook is valid
+            if (!fullHadith && result.idInBook && result.idInBook > 0) {
+               console.warn(`AI Result ID ${result.id} not found in ${result.collectionId}, trying idInBook ${result.idInBook}`);
+               fullHadith = collectionData.hadiths.find(h => h.idInBook === result.idInBook);
+            }
+
+            // Fallback strategy 2: Text matching (optional, can be slow/inaccurate)
+            // if (!fullHadith && result.text) { ... }
+
+            if (fullHadith) {
+                matchCount++;
+                const chapter = collectionData.chapters.find(c => c.id === fullHadith.chapterId);
+                // Return a new object with enriched data
+                return {
+                    ...result, // Keep score, potentially API text if enrichment fails below
+                    id: fullHadith.id, // Correct local ID
+                    idInBook: fullHadith.idInBook,
+                    bookId: fullHadith.bookId,
+                    chapterId: fullHadith.chapterId,
+                    chapterName: chapter ? chapter.english : "Chapter not found",
+                    narrator: fullHadith.english.narrator,
+                    text: fullHadith.english.text, // Prioritize local text
+                    arabicText: fullHadith.arabic, // Local Arabic text
+                };
+            } else {
+                 mismatchCount++;
+                 console.warn(`Could not find full hadith details for API result ID ${result.id} (or fallbacks) in ${result.collectionId}`);
+                 // Return the result from the API mapping if enrichment failed
+                 return result; 
+            }
+        });
+        
+        console.log(`AI Search results processed: ${matchCount} enriched, ${mismatchCount} could not be fully enriched.`);
+        
+        setAllSearchResults(enrichedResults);
+        setCurrentPage(1); 
+        setSearchQuery(query); // Show original user query in search bar
         setView("search_results");
+
       } catch (error) {
-        setError("Failed to search hadiths");
-        console.error("Search error:", error);
+        console.error("AI Search error:", error);
+        setError("Failed to perform AI search: " + (error instanceof Error ? error.message : "Unknown error"));
       } finally {
         setSearchLoading(false);
       }
-    } else {
-      // Fall back to your local keyword search implementation.
+
+    // --- Local Keyword Search Branch ---
+    } else { 
       setSearchLoading(true);
       setError(null);
       
-      const normalizedQuery = normalizeArabicText(query.toLowerCase());
+      // Normalize query for comparison (lowercase handled by regex 'i' flag for English)
+      // Keep Arabic normalization consistent
+      const normalizedQuery = isArabicText(query) ? normalizeArabicText(query) : query.toLowerCase();
+      
+      // Build the Regular Expression for whole-word matching
+      const escapedQuery = escapeRegExp(normalizedQuery);
+      let searchRegex: RegExp | null = null;
+      try {
+        // Use 'i' flag for case-insensitivity (mainly for English)
+        searchRegex = new RegExp(`\\b${escapedQuery}\\b`, 'i'); 
+        console.log("Using regex:", searchRegex); // For debugging
+      } catch(e) {
+        console.error("Failed to create search regex:", e);
+        setError("Invalid search pattern.");
+        setSearchLoading(false);
+        return; // Exit search if regex is invalid
+      }
+
       const localResults: SearchResult[] = [];
       
-      // Search through all loaded collections
+      // Search through all preloaded collections
       Object.entries(loadedCollections).forEach(([collectionId, collectionData]) => {
         const collectionInfo = collections.find(c => c.id === collectionId);
-        if (!collectionInfo || !collectionData) return;
+        if (!collectionInfo || !collectionData?.hadiths) return; // Basic check
         
         collectionData.hadiths.forEach(hadith => {
+          // Prepare texts for checking
           const normalizedArabic = normalizeArabicText(hadith.arabic);
-          const englishTextLower = hadith.english.text.toLowerCase();
-          const narratorLower = hadith.english.narrator.toLowerCase();
+          const englishText = hadith.english?.text || ""; // Handle potential missing text
+          const narrator = hadith.english?.narrator || ""; // Handle potential missing narrator
           
-          // Simple keyword check (case-insensitive and normalized for Arabic)
+          // Use regex.test() for whole-word matching
           if (
-            normalizedArabic.includes(normalizedQuery) ||
-            englishTextLower.includes(normalizedQuery) ||
-            narratorLower.includes(normalizedQuery)
+            searchRegex && ( // Check regex exists
+              searchRegex.test(normalizedArabic) ||
+              searchRegex.test(englishText) ||
+              searchRegex.test(narrator)
+            )
           ) {
-            const chapter = collectionData.chapters.find(c => c.id === hadith.chapterId);
+            const chapter = collectionData.chapters?.find(c => c.id === hadith.chapterId);
             localResults.push({
               id: hadith.id,
               bookId: hadith.bookId,
@@ -465,9 +567,10 @@ export default function Hadith() {
         });
       });
       
+      console.log(`Local keyword search found ${localResults.length} results.`);
       setAllSearchResults(localResults);
-      setCurrentPage(1); // Reset to first page
-      setSearchQuery(query);
+      setCurrentPage(1);
+      setSearchQuery(query); // Show original user query in search bar
       setView("search_results");
       setSearchLoading(false);
     }
@@ -662,8 +765,8 @@ export default function Hadith() {
         <Switch
           value={isAISearch}
           onValueChange={setIsAISearch}
-          trackColor={{ false: '#767577', true: '#81b0ff' }}
-          thumbColor={isAISearch ? '#f5dd4b' : '#f4f3f4'}
+          trackColor={{ false: '#767577', true: '#32CD32' }}
+          thumbColor={isAISearch ? '#f4f3f4' : '#f4f3f4'}
         />
       </View>
     </View>
@@ -702,7 +805,8 @@ export default function Hadith() {
   if (view === 'search_results') {
     return (
       <SafeAreaView className="flex-1 bg-gray-900">
-        <View className="bg-gray-900 pt-4 px-4 flex-1">
+        {/* // Use View with padding instead of applying directly to SafeAreaView for consistency */}
+        <View className="bg-gray-900 pt-4 px-4 flex-1"> 
           <TouchableOpacity 
             className="flex-row items-center mb-4"
             onPress={handleBack}
@@ -714,17 +818,23 @@ export default function Hadith() {
             Search Results {isAISearch ? '(AI)' : ''}
           </Text>
           
-          {renderSearchBar("Search hadiths in English or Arabic...")}
+          {/* Search bar rendering */}
+          {renderSearchBar("Search hadiths in English or Arabic...")} 
           
-          <Text className="text-gray-400 font-poppins mb-2">
-            {allSearchResults.length} results for "{searchQuery}"
-          </Text>
+          {/* Display search query info */}
+          {searchQuery && !searchLoading && ( // Only show if there's a query and not loading initial results
+             <Text className="text-gray-400 font-poppins mb-2 text-center"> 
+               {allSearchResults.length} results for "{searchQuery}"
+             </Text>
+          )}
           
+          {/* Search Results Component */}
           <SearchResults 
             results={displayedSearchResults}
             onResultPress={handleSearchResultSelect}
             loading={searchLoading}
             ref={searchListRef}
+            searchQuery={searchQuery} // <-- Prop added here
           />
           
           {/* Pagination Controls */}
@@ -736,7 +846,7 @@ export default function Hadith() {
                   searchListRef.current?.scrollToOffset({ offset: 0, animated: true });
                 }}
                 disabled={currentPage === 1}
-                className={`px-4 py-2 rounded ${currentPage === 1 ? 'bg-gray-600' : 'bg-gray-700'}`}
+                className={`px-4 py-2 rounded ${currentPage === 1 ? 'bg-gray-600 opacity-50' : 'bg-gray-700'}`} // Added opacity for disabled
               >
                 <Text className={`font-poppinsSemiBold ${currentPage === 1 ? 'text-gray-400' : 'text-white'}`}>
                   Previous
@@ -751,7 +861,7 @@ export default function Hadith() {
                   searchListRef.current?.scrollToOffset({ offset: 0, animated: true });
                 }}
                 disabled={currentPage === totalPages}
-                className={`px-4 py-2 rounded ${currentPage === totalPages ? 'bg-gray-600' : 'bg-gray-700'}`}
+                className={`px-4 py-2 rounded ${currentPage === totalPages ? 'bg-gray-600 opacity-50' : 'bg-gray-700'}`} // Added opacity for disabled
               >
                 <Text className={`font-poppinsSemiBold ${currentPage === totalPages ? 'text-gray-400' : 'text-white'}`}>
                   Next
@@ -925,7 +1035,7 @@ export default function Hadith() {
         
         <FlatList
           data={chapterHadiths}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(item, index) => `${selectedCollection}-${item.id}-${index}`}
           contentContainerStyle={{ padding: 12 }}
           renderItem={({ item }) => (
             <TouchableOpacity 
@@ -975,7 +1085,7 @@ export default function Hadith() {
         
         <FlatList
           data={hadithData?.chapters || []}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(item, index) => `${selectedCollection || ''}-chapter-${item.id}-${index}`}
           contentContainerStyle={{ padding: 12 }}
           renderItem={({ item }) => (
             <TouchableOpacity 
