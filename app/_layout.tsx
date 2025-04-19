@@ -27,7 +27,7 @@ export default function RootLayout() {
         contentStyle: { backgroundColor: '#121212' },
       }}>
         <Stack.Screen name="index" options={{ title: "Islamic App" }} />
-        <Stack.Screen name="quran" options={{ title: "Quran" }} />
+        <Stack.Screen name="quran/quran" options={{ title: "Quran" }} />
         <Stack.Screen name="hadith" options={{ title: "Hadith" }} />
       </Stack>
     </>

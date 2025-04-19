@@ -23,7 +23,7 @@ export default function Index() {
   }, []);
 
   const handleQuranPress = () => {
-    router.push("/quran");
+    router.push("/quran/quran");
   };
 
   const handleHadithPress = () => {

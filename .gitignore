@@ -66,23 +66,12 @@ training/**/eval/
 
 # Large Data Files (Consider Git LFS or other storage if needed)
 training/hadiths.json
-training/hadiths_normalized.json # If you generate this
 
 # Other files to ignore
 model_training.txt 
 
-training/abudawud.json
-training/ahmed.json
-training/bukhari.json
-training/darimi.json
-training/ibnmajah.json
-training/malik.json
-training/muslim.json
-training/nasai.json
-training/tirmidhi.json 
 ios/
 android/ 
-# NOTE: assets/*.json was removed. Track individual asset files.
-# If specific large JSON files exist in assets/ add rules for them:
-# assets/hadiths.json 
-# assets/hadiths_normalized.json
+
+
+utils/converion_script.py
