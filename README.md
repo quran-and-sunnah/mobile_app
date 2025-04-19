@@ -47,6 +47,7 @@ mobile_app/
         * `hadith_index.faiss`
         * `index_mapping.json`
         * `hadiths.json`
+        * `hadith_data.db`
 
 3.  **Place Downloaded Files:**
     * Unzip `checkpoint-2367.zip`.
@@ -54,6 +55,7 @@ mobile_app/
     * Place `hadith_index.faiss` inside the `backend/` directory.
     * Place `index_mapping.json` inside the `backend/` directory.
     * Place `hadiths.json` inside the `training/` directory.
+    * Place `hadith_data.db` in `assets/database`.
 
 4.  **Frontend Setup:**
     * Navigate to the project root directory (where `package.json` is).
