@@ -58,8 +58,8 @@ training/hadith-semantic-model-*_checkpoints/
 hadith-semantic-model*/
 
 # Generated Index Files in Backend
-backend/hadith_index.faiss
-backend/index_mapping.json
+backend/hadith_index_openai_small_recursive.faiss
+backend/index_mapping_openai_small_recursive.json
 
 # Ignore any eval results saved directly in model folders
 training/**/eval/
@@ -76,3 +76,7 @@ android/
 
 utils/converion_script.py
 assets/database/hadith_data.db
+
+assets/*.json
+
+.env

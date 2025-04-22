@@ -1,4 +1,4 @@
-# conversion_script.py (Conceptual Example)
+# conversion_script.py
 import json
 import sqlite3
 import os
@@ -22,7 +22,7 @@ def normalize_arabic_text(text):
 
 # --- Main Script ---
 DATABASE_NAME = 'hadith_data.db'
-ASSETS_DIR = './assets' # Path to your JSON files
+ASSETS_DIR = '../assets' # Path to your JSON files
 COLLECTIONS_INFO = [ # Match your TS array
     { "id": 'bukhari', "name": 'Bukhari', "author": 'Imam Bukhari', "initial": 'B' },
     { "id": 'muslim', "name": 'Muslim', "author": 'Imam Muslim', "initial": 'M' },
@@ -38,11 +38,13 @@ COLLECTIONS_INFO = [ # Match your TS array
 # Delete existing DB if it exists to start fresh
 if os.path.exists(DATABASE_NAME):
     os.remove(DATABASE_NAME)
+    print(f"Removed existing database '{DATABASE_NAME}'.")
 
 conn = sqlite3.connect(DATABASE_NAME)
 cursor = conn.cursor()
 
 # Create Tables
+print("Creating standard tables...")
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS collections (
     id TEXT PRIMARY KEY,
@@ -66,10 +68,11 @@ CREATE TABLE IF NOT EXISTS chapters (
     FOREIGN KEY (collection_id) REFERENCES collections (id)
 )''')
 
+# Use internal_id as the primary key for hadiths table
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS hadiths (
-    internal_id INTEGER PRIMARY KEY AUTOINCREMENT, -- Unique ID across DB
-    id INTEGER NOT NULL, -- Hadith ID within collection
+    internal_id INTEGER PRIMARY KEY AUTOINCREMENT, -- Unique ID across DB, used for FTS rowid
+    id INTEGER NOT NULL, -- Hadith ID within collection (original JSON ID)
     collection_id TEXT NOT NULL,
     chapter_id INTEGER,
     book_id INTEGER,
@@ -77,12 +80,16 @@ CREATE TABLE IF NOT EXISTS hadiths (
     english_narrator TEXT,
     english_text TEXT,
     arabic_text TEXT,
-    arabic_text_normalized TEXT, -- For faster Arabic search
+    arabic_text_normalized TEXT, -- For faster Arabic search / FTS indexing
     FOREIGN KEY (collection_id) REFERENCES collections (id)
     -- Optional: FOREIGN KEY (collection_id, chapter_id) REFERENCES chapters (collection_id, id)
+    -- Check if chapter IDs are unique per collection or globally before adding composite FK
 )''')
+conn.commit()
+print("Standard tables created.")
 
 # --- Process Each Collection ---
+total_hadiths_processed = 0
 for coll_info in COLLECTIONS_INFO:
     collection_id = coll_info['id']
     json_path = os.path.join(ASSETS_DIR, f'{collection_id}.json')
@@ -127,6 +134,7 @@ for coll_info in COLLECTIONS_INFO:
             en_hadith = hadith.get('english', {})
             arabic_raw = hadith.get('arabic', '')
             arabic_normalized = normalize_arabic_text(arabic_raw)
+            # Using original `id` from JSON, chapterId, bookId, idInBook directly
             hadiths_to_insert.append((
                 hadith.get('id'), collection_id, hadith.get('chapterId'), hadith.get('bookId'),
                 hadith.get('idInBook'), en_hadith.get('narrator'), en_hadith.get('text'),
@@ -136,6 +144,8 @@ for coll_info in COLLECTIONS_INFO:
         INSERT INTO hadiths (id, collection_id, chapter_id, book_id, id_in_book, english_narrator, english_text, arabic_text, arabic_text_normalized)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', hadiths_to_insert)
+        total_hadiths_processed += len(hadiths_to_insert)
+        print(f"Processed {len(chapters_to_insert)} chapters and {len(hadiths_to_insert)} hadiths for {collection_id}.")
 
     except Exception as e:
         print(f"Error processing {collection_id}: {e}")
@@ -143,33 +153,82 @@ for coll_info in COLLECTIONS_INFO:
     else:
         conn.commit() # Commit changes for this collection
 
-print("Creating indexes...")
+print(f"\nFinished processing all collections. Total hadiths inserted: {total_hadiths_processed}")
+
 # --- Add Indexes for Performance ---
+print("Creating standard indexes...")
 cursor.execute("CREATE INDEX IF NOT EXISTS idx_chapters_collection ON chapters (collection_id)")
 cursor.execute("CREATE INDEX IF NOT EXISTS idx_hadiths_collection ON hadiths (collection_id)")
 cursor.execute("CREATE INDEX IF NOT EXISTS idx_hadiths_chapter ON hadiths (collection_id, chapter_id)")
 cursor.execute("CREATE INDEX IF NOT EXISTS idx_hadiths_id_in_book ON hadiths (collection_id, id_in_book)")
-# Optional: Index for text search (LIKE might still be slow on large text)
-# cursor.execute("CREATE INDEX IF NOT EXISTS idx_hadiths_en_text ON hadiths (english_text)")
-# cursor.execute("CREATE INDEX IF NOT EXISTS idx_hadiths_ar_norm_text ON hadiths (arabic_text_normalized)")
+# Indexing the normalized arabic text might still be useful for specific non-FTS queries if needed
+cursor.execute("CREATE INDEX IF NOT EXISTS idx_hadiths_ar_norm_text ON hadiths (arabic_text_normalized)")
+conn.commit()
+print("Standard indexes created.")
 
-# --- Optional: Full-Text Search (FTS5) ---
-# Create an FTS table mirroring hadiths for efficient text search
-# cursor.execute('''
-# CREATE VIRTUAL TABLE IF NOT EXISTS hadiths_fts USING fts5(
-#     english_narrator,
-#     english_text,
-#     arabic_text_normalized,
-#     content='hadiths', -- Link to original table
-#     content_rowid='internal_id' -- Use the unique row ID
-# )''')
-# # Populate the FTS table
-# cursor.execute('''
-# INSERT INTO hadiths_fts (rowid, english_narrator, english_text, arabic_text_normalized)
-# SELECT internal_id, english_narrator, english_text, arabic_text_normalized FROM hadiths
-# ''')
+# --- Add Full-Text Search (FTS5) ---
+print("Creating FTS5 table...")
+# Create the FTS table using fts5 engine
+# Link it to the 'hadiths' table using the unique 'internal_id' as the rowid
+cursor.execute('''
+CREATE VIRTUAL TABLE IF NOT EXISTS hadiths_fts USING fts5(
+    english_narrator,
+    english_text,
+    arabic_text_normalized,
+    content='hadiths',        -- Optional: Name of the content table
+    content_rowid='internal_id', -- *** IMPORTANT: Use the actual PK of hadiths ***
+    -- Optional: Add tokenizer if needed, e.g., tokenize="unicode61 remove_diacritics 0"
+    -- Start without tokenizer for simplicity unless issues arise
+    -- Note: Default tokenizer 'unicode61' is often good for multiple languages.
+    tokenize = "unicode61 remove_diacritics 0" -- Try unicode61 to handle text better, disable diacritics removal as we pre-normalized
+)''')
+conn.commit()
+print("FTS5 table created.")
+
+print("Populating FTS5 table...")
+# Populate the FTS table with data from the main hadiths table
+# This needs to run *after* hadiths table is fully populated
+cursor.execute('''
+INSERT INTO hadiths_fts (rowid, english_narrator, english_text, arabic_text_normalized)
+SELECT internal_id, english_narrator, english_text, arabic_text_normalized FROM hadiths
+''')
+conn.commit()
+print("FTS5 table populated.")
+
+print("Creating FTS synchronization triggers...")
+# --- Triggers to keep FTS table synced with hadiths table ---
+# (Essential if the hadiths table could ever be modified *after* initial creation)
+
+# After deleting a hadith, delete from FTS index
+# The 'delete' command requires the old rowid
+cursor.execute('''
+CREATE TRIGGER IF NOT EXISTS hadiths_ad AFTER DELETE ON hadiths BEGIN
+  INSERT INTO hadiths_fts (hadiths_fts, rowid) VALUES ('delete', old.internal_id);
+END;
+''')
+
+# After inserting a hadith, insert into FTS index
+cursor.execute('''
+CREATE TRIGGER IF NOT EXISTS hadiths_ai AFTER INSERT ON hadiths BEGIN
+  INSERT INTO hadiths_fts (rowid, english_narrator, english_text, arabic_text_normalized)
+  VALUES (new.internal_id, new.english_narrator, new.english_text, new.arabic_text_normalized);
+END;
+''')
+
+# After updating a hadith, update the FTS index
+# This is done by deleting the old entry and inserting the new one
+# Need to reference the specific columns that might change
+cursor.execute('''
+CREATE TRIGGER IF NOT EXISTS hadiths_au AFTER UPDATE ON hadiths BEGIN
+  INSERT INTO hadiths_fts (hadiths_fts, rowid) VALUES ('delete', old.internal_id);
+  INSERT INTO hadiths_fts (rowid, english_narrator, english_text, arabic_text_normalized)
+  VALUES (new.internal_id, new.english_narrator, new.english_text, new.arabic_text_normalized);
+END;
+''')
 
 conn.commit()
-print("Indexes created.")
+print("FTS triggers created.")
+
+# --- Finalize ---
 conn.close()
-print(f"Database '{DATABASE_NAME}' created successfully.")
+print(f"Database '{DATABASE_NAME}' created successfully with FTS5.")
