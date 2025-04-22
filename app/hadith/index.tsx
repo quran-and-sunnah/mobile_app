@@ -3,7 +3,6 @@
     import { useRouter } from "expo-router";
     import { Ionicons } from '@expo/vector-icons';
     import { dbPromise } from '../../utils/dbSetup'; // Adjust path: up one level from hadith dir
-    import * as SQLite from 'expo-sqlite';
     import type { SQLiteDatabase } from 'expo-sqlite';
     import SearchBar from "../../components/SearchBar"; // Adjust path
     import "../../global.css"; // Adjust path
