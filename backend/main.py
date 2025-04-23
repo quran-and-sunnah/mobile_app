@@ -21,13 +21,12 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 # --- Configuration Paths ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-TRAINING_DIR = os.path.join(BASE_DIR, "..", "training")
 ASSETS_DIR = os.path.join(BASE_DIR, "..", "assets") # Define assets directory
 # Index/Mapping paths
 INDEX_PATH = os.path.join(BASE_DIR, "hadith_index_openai_small_recursive.faiss")
 MAPPING_PATH = os.path.join(BASE_DIR, "index_mapping_openai_small_recursive.json")
 # Data paths
-HADITHS_JSON_PATH = os.path.join(TRAINING_DIR, "hadiths.json")
+HADITHS_JSON_PATH = os.path.join(ASSETS_DIR, "hadiths.json")
 DB_PATH = os.path.abspath(os.path.join(ASSETS_DIR, "database", "hadith_data.db")) # <-- Path to SQLite DB
 
 OPENAI_MODEL = "text-embedding-3-small"

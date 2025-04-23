@@ -6,6 +6,7 @@ import Constants from 'expo-constants';
 import { dbPromise } from '@/utils/dbSetup';
 import type { SQLiteDatabase } from 'expo-sqlite';
 import SearchBar from "@/components/SearchBar";
+import BottomNavBar from "@/components/BottomNavBar";
 import { normalizeArabicText, isArabicText, escapeRegExp } from "@/utils/textUtils";
 import "@/global.css";
 
@@ -323,7 +324,7 @@ export default function HadithSearchScreen() {
             {/* SearchBar */}
             <View className="px-4 pt-4 pb-2">
                 <SearchBar
-                    key={searchQuery} // Reset component on new search
+                    key={searchQuery}
                     onSearch={handleRefineSearch}
                     placeholder={`Search... (current: "${searchQuery}")`}
                     isLoading={searchLoading}
@@ -341,14 +342,14 @@ export default function HadithSearchScreen() {
                 {/* Results List */}
                 {!error && (
                     <FlatList
+                        className="flex-1" // Add flex-1 to make list take available space
                         ref={searchListRef}
                         data={displayedSearchResults}
-                        keyExtractor={(item) => `${item.collectionId}-${item.id}`} // Use unique hadith ID
-                        contentContainerStyle={{ paddingBottom: (totalPages > 1 ? 80 : 20) }}
+                        keyExtractor={(item) => `${item.collectionId}-${item.id}`}
+                        // Removed explicit bottom padding
+                        contentContainerStyle={{ paddingBottom: 16 }}
                         ItemSeparatorComponent={() => <View className="h-3" />}
                         ListEmptyComponent={() => ( !searchLoading && <View><Text className="text-center text-slate-400 py-20 font-poppins">No results found for "{searchQuery}".</Text></View> )}
-
-                        // --- RENDER ITEM (Minor update to use possibly derived collectionName) ---
                         renderItem={({ item }) => {
                             const englishSnippet = prepareTextSnippet(item.text, 150);
                             const narratorSnippet = item.narrator || '';
@@ -392,37 +393,14 @@ export default function HadithSearchScreen() {
                                 </TouchableOpacity>
                             );
                         }}
-                        // --- END RENDER ITEM ---
-
                         initialNumToRender={10}
                         maxToRenderPerBatch={8}
                         windowSize={15}
                     />
                 )}
-
-                {/* Pagination Controls (No Changes Needed) */}
-                {totalPages > 1 && !searchLoading && !error && (
-                    <View style={styles.paginationContainer}>
-                        <Pressable
-                            onPress={() => { setCurrentPage(prev => Math.max(prev - 1, 1)); searchListRef.current?.scrollToOffset({ offset: 0, animated: true }); }}
-                            disabled={currentPage === 1}
-                            style={({ pressed }) => [ styles.paginationButton, currentPage === 1 ? styles.paginationButtonDisabled : {}, pressed && currentPage !== 1 ? styles.paginationButtonPressed : {} ]}
-                        >
-                            <Ionicons name="arrow-back" size={18} color={currentPage === 1 ? '#64748b' : '#f8fafc'} />
-                            <Text style={[styles.paginationButtonText, currentPage === 1 ? styles.paginationTextDisabled : {}]}>Prev</Text>
-                        </Pressable>
-                        <Text style={styles.paginationText}>Page {currentPage} / {totalPages}</Text>
-                        <Pressable
-                            onPress={() => { setCurrentPage(prev => Math.min(prev + 1, totalPages)); searchListRef.current?.scrollToOffset({ offset: 0, animated: true }); }}
-                            disabled={currentPage === totalPages}
-                            style={({ pressed }) => [ styles.paginationButton, currentPage === totalPages ? styles.paginationButtonDisabled : {}, pressed && currentPage !== totalPages ? styles.paginationButtonPressed : {} ]}
-                        >
-                            <Text style={[styles.paginationButtonText, currentPage === totalPages ? styles.paginationTextDisabled : {}]}>Next</Text>
-                            <Ionicons name="arrow-forward" size={18} color={currentPage === totalPages ? '#64748b' : '#f8fafc'} />
-                        </Pressable>
-                    </View>
-                )}
             </View>
+            {/* BottomNavBar is now the last element */}
+            <BottomNavBar />
         </SafeAreaView>
     );
 }
@@ -430,7 +408,7 @@ export default function HadithSearchScreen() {
 // --- Helper Function (Frontend Only) ---
 // Simple helper to derive a collection ID if backend doesn't send it
 function standardize_collection_frontend(title: string): string {
-    const normalized_title = title.toLowerCase().replace(/[\s\-\'’]/g, '');
+    const normalized_title = title.toLowerCase().replace(/[\s\-\'']/g, '');
     const mapping: { [key: string]: string } = {
         "sahihalbukhari": "bukhari", "bukhari": "bukhari",
         "sahihmuslim": "muslim", "muslim": "muslim",

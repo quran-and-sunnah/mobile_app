@@ -61,15 +61,6 @@ hadith-semantic-model*/
 backend/hadith_index_openai_small_recursive.faiss
 backend/index_mapping_openai_small_recursive.json
 
-# Ignore any eval results saved directly in model folders
-training/**/eval/
-
-# Large Data Files (Consider Git LFS or other storage if needed)
-training/hadiths.json
-
-# Other files to ignore
-model_training.txt 
-
 ios/
 android/ 
 

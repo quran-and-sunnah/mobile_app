@@ -22,8 +22,8 @@ logging.basicConfig(format='%(asctime)s - %(message)s',
 
 # --- Configuration ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-TRAINING_DIR = os.path.join(BASE_DIR, "..", "training")
-INPUT_JSON_PATH = os.path.join(TRAINING_DIR, "hadiths.json")
+ASSETS_DIR = os.path.join(BASE_DIR, "..", "assets")
+INPUT_JSON_PATH = os.path.join(ASSETS_DIR, "hadiths.json")
 OUTPUT_INDEX_PATH = os.path.join(BASE_DIR, "hadith_index_openai_small_recursive.faiss") # <-- New index name
 OUTPUT_MAPPING_PATH = os.path.join(BASE_DIR, "index_mapping_openai_small_recursive.json") # <-- New mapping name
 

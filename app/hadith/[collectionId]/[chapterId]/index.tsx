@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, FlatList, ActivityIndicator, SafeAreaView, Pressable, StyleSheet, Switch } from "react-native";
+import { View, Text, FlatList, ActivityIndicator, SafeAreaView, Pressable, StyleSheet, Switch, Modal, Alert, TextInput } from "react-native";
 import { useRouter, useLocalSearchParams, Stack } from "expo-router";
 import { Ionicons } from '@expo/vector-icons';
-import { dbPromise } from '../../../../utils/dbSetup'; // Adjust path: up three levels
+import { dbPromise } from '../../../../utils/dbSetup';
 import * as SQLite from 'expo-sqlite';
 import type { SQLiteDatabase } from 'expo-sqlite';
-import SearchBar from "../../../../components/SearchBar"; // Adjust path
-import "../../../../global.css"; // Adjust path
+import SearchBar from "../../../../components/SearchBar";
+import "../../../../global.css";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import BottomNavBar from "../../../../components/BottomNavBar";
 
 // --- Interfaces ---
 interface Hadith {
@@ -24,6 +26,17 @@ interface ChapterInfo {
     // Add collection_name if needed for more context in title
 }
 
+interface Folder {
+    id: string;
+    name: string;
+    count: number;
+}
+
+const STORAGE_KEYS = {
+    FOLDERS: 'bookmark_folders',
+    BOOKMARKS: 'bookmark_items'
+};
+
 export default function HadithsListScreen() {
     const router = useRouter();
     const params = useLocalSearchParams<{ collectionId: string; chapterId: string }>();
@@ -36,6 +49,37 @@ export default function HadithsListScreen() {
     const [hadithsList, setHadithsList] = useState<Hadith[]>([]);
     const [chapterName, setChapterName] = useState<string>(""); // For header title
     const [isAISearch, setIsAISearch] = useState(false); // Add AI Search state
+    const [folders, setFolders] = useState<Folder[]>([]);
+    const [selectedHadith, setSelectedHadith] = useState<Hadith | null>(null);
+    const [bookmarkModalVisible, setBookmarkModalVisible] = useState(false);
+    const [newFolderModalVisible, setNewFolderModalVisible] = useState(false);
+    const [newFolderName, setNewFolderName] = useState('');
+
+    // Load folders from storage
+    useEffect(() => {
+        const loadFolders = async () => {
+            try {
+                const storedFolders = await AsyncStorage.getItem(STORAGE_KEYS.FOLDERS);
+                setFolders(storedFolders ? JSON.parse(storedFolders) : []);
+            } catch (error) {
+                console.error('Error loading folders:', error);
+                setFolders([]);
+            }
+        };
+        loadFolders();
+    }, []);
+
+    // Save folders whenever they change
+    useEffect(() => {
+        const saveFolders = async () => {
+            try {
+                await AsyncStorage.setItem(STORAGE_KEYS.FOLDERS, JSON.stringify(folders));
+            } catch (error) {
+                console.error('Error saving folders:', error);
+            }
+        };
+        saveFolders();
+    }, [folders]);
 
     // --- Database Initialization Effect ---
     useEffect(() => {
@@ -148,6 +192,60 @@ export default function HadithsListScreen() {
         console.log("Cancel search");
     };
 
+    const handleBookmarkPress = (hadith: Hadith) => {
+        setSelectedHadith(hadith);
+        setBookmarkModalVisible(true);
+    };
+
+    const createNewFolder = () => {
+        if (newFolderName.trim() === '') {
+            Alert.alert('Error', 'Please enter a folder name');
+            return;
+        }
+        
+        const newFolder: Folder = {
+            id: `f${new Date().getTime()}`,
+            name: newFolderName,
+            count: 0
+        };
+        
+        setFolders([...folders, newFolder]);
+        setNewFolderName('');
+        setNewFolderModalVisible(false);
+    };
+
+    const addBookmark = async (folderId: string) => {
+        if (!selectedHadith || !collectionId || chapterId === null) return;
+
+        try {
+            const storedBookmarks = await AsyncStorage.getItem(STORAGE_KEYS.BOOKMARKS);
+            const bookmarks = storedBookmarks ? JSON.parse(storedBookmarks) : [];
+            
+            const newBookmark = {
+                id: `b${new Date().getTime()}`,
+                folderId,
+                collectionId,
+                hadithNumber: selectedHadith.idInBook,
+                text: selectedHadith.english.text
+            };
+
+            const updatedBookmarks = [...bookmarks, newBookmark];
+            await AsyncStorage.setItem(STORAGE_KEYS.BOOKMARKS, JSON.stringify(updatedBookmarks));
+
+            // Update folder count
+            const updatedFolders = folders.map(f => 
+                f.id === folderId ? {...f, count: f.count + 1} : f
+            );
+            setFolders(updatedFolders);
+
+            setBookmarkModalVisible(false);
+            Alert.alert('Success', 'Hadith bookmarked successfully');
+        } catch (error) {
+            console.error('Error adding bookmark:', error);
+            Alert.alert('Error', 'Failed to bookmark hadith');
+        }
+    };
+
     // --- UI Rendering ---
     const renderSearchBar = (placeholder: string) => (
         <View className="mb-3 px-4">
@@ -171,10 +269,105 @@ export default function HadithsListScreen() {
         </View>
     );
 
+    const renderBookmarkModal = () => (
+        <Modal
+            animationType="slide"
+            transparent={true}
+            visible={bookmarkModalVisible}
+            onRequestClose={() => setBookmarkModalVisible(false)}
+        >
+            <View className="flex-1 justify-center items-center bg-black/50">
+                <View className="bg-slate-800 p-5 rounded-lg w-4/5">
+                    <Text className="text-white font-poppinsSemiBold text-lg mb-4">Choose Folder</Text>
+                    
+                    {folders.length > 0 ? (
+                        <FlatList
+                            data={folders}
+                            keyExtractor={item => item.id}
+                            renderItem={({ item }) => (
+                                <Pressable
+                                    className="bg-slate-700 p-4 rounded-lg mb-2 active:bg-slate-600"
+                                    onPress={() => addBookmark(item.id)}
+                                >
+                                    <Text className="text-white font-poppinsSemiBold">{item.name}</Text>
+                                    <Text className="text-slate-400 font-poppins text-sm">{item.count} hadiths</Text>
+                                </Pressable>
+                            )}
+                        />
+                    ) : (
+                        <View className="items-center p-4">
+                            <Text className="text-slate-400 font-poppins text-center mb-4">
+                                No folders available. Create a new folder to bookmark this hadith.
+                            </Text>
+                        </View>
+                    )}
+
+                    <View className="flex-row justify-end mt-4">
+                        <Pressable 
+                            className="px-4 py-2 mr-2"
+                            onPress={() => setBookmarkModalVisible(false)}
+                        >
+                            <Text className="text-slate-400 font-poppins">Cancel</Text>
+                        </Pressable>
+                        <Pressable 
+                            className="bg-teal-600 px-4 py-2 rounded-lg"
+                            onPress={() => {
+                                setBookmarkModalVisible(false);
+                                setNewFolderModalVisible(true);
+                            }}
+                        >
+                            <Text className="text-white font-poppinsSemiBold">New Folder</Text>
+                        </Pressable>
+                    </View>
+                </View>
+            </View>
+        </Modal>
+    );
+
+    const renderNewFolderModal = () => (
+        <Modal
+            animationType="slide"
+            transparent={true}
+            visible={newFolderModalVisible}
+            onRequestClose={() => setNewFolderModalVisible(false)}
+        >
+            <View className="flex-1 justify-center items-center bg-black/50">
+                <View className="bg-slate-800 p-5 rounded-lg w-4/5">
+                    <Text className="text-white font-poppinsSemiBold text-lg mb-4">Create New Folder</Text>
+                    <TextInput
+                        className="bg-slate-700 text-white px-4 py-2 rounded-lg mb-4 font-poppins"
+                        placeholder="Folder Name"
+                        placeholderTextColor="#94a3b8"
+                        value={newFolderName}
+                        onChangeText={setNewFolderName}
+                    />
+                    <View className="flex-row justify-end">
+                        <Pressable 
+                            className="px-4 py-2 mr-2"
+                            onPress={() => setNewFolderModalVisible(false)}
+                        >
+                            <Text className="text-slate-400 font-poppins">Cancel</Text>
+                        </Pressable>
+                        <Pressable 
+                            className="bg-teal-600 px-4 py-2 rounded-lg"
+                            onPress={createNewFolder}
+                        >
+                            <Text className="text-white font-poppinsSemiBold">Create</Text>
+                        </Pressable>
+                    </View>
+                </View>
+            </View>
+        </Modal>
+    );
+
     return (
         <SafeAreaView className="flex-1 bg-slate-900">
             {/* Set the header title dynamically */}
-            <Stack.Screen options={{ title: chapterName || "Hadiths" }} />
+            <Stack.Screen 
+                options={{ 
+                    title: chapterName || "Loading..." 
+                }} 
+            />
 
             {/* Search Bar */}
             <View className="px-4 pt-4 pb-2">
@@ -204,7 +397,7 @@ export default function HadithsListScreen() {
                     data={hadithsList}
                     keyExtractor={(item) => `${collectionId}-hadith-${item.id}`}
                     ItemSeparatorComponent={() => <View className="h-px bg-slate-700 mx-4" />}
-                    contentContainerStyle={{ paddingBottom: 16 }}
+                    contentContainerStyle={{ paddingBottom: 80 }}
                     renderItem={({ item }) => (
                         <Pressable
                             className="px-5 py-4 bg-slate-900 active:bg-slate-800"
@@ -218,6 +411,10 @@ export default function HadithsListScreen() {
                     ListEmptyComponent={<View><Text className="text-center text-slate-400 py-10 font-poppins">No Hadiths found in this chapter.</Text></View>}
                 />
             )}
+
+            {renderBookmarkModal()}
+            {renderNewFolderModal()}
+            <BottomNavBar />
         </SafeAreaView>
     );
 }

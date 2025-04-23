@@ -22,12 +22,11 @@ A mobile application built with React Native (Expo Go) and a Python FastAPI back
 
 mobile_app/
 ├── assets/         # App assets (fonts, images, hadith JSONs)
+│   └── hadiths.json      # Full dataset is stored here
+│   └── database/   # SQLite database for chapter lookups
 ├── backend/        # FastAPI server code, requirements, index files
 ├── components/     # React Native components
 ├── app/            # Expo app screens/routing
-├── training/       # Python scripts & source data for AI model training
-│   ├── hadith-semantic-model-labse_checkpoints/ # Downloaded model checkpoints go here
-│   └── hadiths.json      # Downloaded full dataset goes here
 ├── .gitignore
 ├── package.json
 ├── README.md
@@ -50,11 +49,9 @@ mobile_app/
         * `hadith_data.db`
 
 3.  **Place Downloaded Files:**
-    * Unzip `checkpoint-2367.zip`.
-    * Place the resulting `checkpoint-2367` **folder** inside the `training/hadith-semantic-model-labse_checkpoints/` directory. (Create the parent directories `training/hadith-semantic-model-labse_checkpoints/` if they don't exist after cloning).
     * Place `hadith_index.faiss` inside the `backend/` directory.
     * Place `index_mapping.json` inside the `backend/` directory.
-    * Place `hadiths.json` inside the `training/` directory.
+    * Place `hadiths.json` inside the `assets/` directory.
     * Place `hadith_data.db` in `assets/database`.
 
 4.  **Frontend Setup:**
